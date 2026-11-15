@@ -12,6 +12,7 @@ using NzbDrone.Core.Download.Pending;
 using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
@@ -94,6 +95,34 @@ namespace NzbDrone.Core.Test.Download.DownloadApprovedReportsTests
 
             await Subject.ProcessDecisions(decisions);
             Mocker.GetMock<IDownloadService>().Verify(v => v.DownloadReport(It.IsAny<RemoteMovie>(), null), Times.Once());
+        }
+
+        [Test]
+        public async Task should_download_one_release_per_edition_of_a_movie()
+        {
+            var movie = GetMovie(1);
+
+            var standard = GetRemoteMovie(new QualityModel(Quality.HDTV720p), movie);
+            standard.EditionSlot = new EditionSlot { MovieEditionId = 0, Name = "Standard", Tracked = true, Monitored = true };
+
+            var extended = GetRemoteMovie(new QualityModel(Quality.HDTV720p), movie);
+            extended.EditionSlot = new EditionSlot { MovieEditionId = 4, Name = "Extended", Tracked = true, Monitored = true };
+
+            var extendedAgain = GetRemoteMovie(new QualityModel(Quality.HDTV720p), movie);
+            extendedAgain.EditionSlot = new EditionSlot { MovieEditionId = 4, Name = "Extended", Tracked = true, Monitored = true };
+
+            var decisions = new List<DownloadDecision>
+            {
+                new DownloadDecision(standard),
+                new DownloadDecision(extended),
+                new DownloadDecision(extendedAgain)
+            };
+
+            await Subject.ProcessDecisions(decisions);
+
+            Mocker.GetMock<IDownloadService>().Verify(v => v.DownloadReport(standard, null), Times.Once());
+            Mocker.GetMock<IDownloadService>().Verify(v => v.DownloadReport(extended, null), Times.Once());
+            Mocker.GetMock<IDownloadService>().Verify(v => v.DownloadReport(extendedAgain, null), Times.Never());
         }
 
         [Test]

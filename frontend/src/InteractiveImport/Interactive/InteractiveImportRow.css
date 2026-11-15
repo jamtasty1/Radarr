@@ -27,3 +27,9 @@
 .customFormatTooltip {
   max-width: 250px;
 }
+
+.untrackedEdition {
+  composes: cell from '~Components/Table/Cells/TableRowCellButton.css';
+
+  color: var(--warningColor);
+}

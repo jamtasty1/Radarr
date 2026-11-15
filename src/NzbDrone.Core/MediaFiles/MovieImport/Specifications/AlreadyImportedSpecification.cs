@@ -32,9 +32,9 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Specifications
 
             var movie = localMovie.Movie;
 
-            if (!movie.HasFile)
+            if (!localMovie.HasExistingFile)
             {
-                _logger.Debug("Skipping already imported check for movie without file");
+                _logger.Debug("Skipping already imported check for movie without file in this edition");
                 return ImportSpecDecision.Accept();
             }
 

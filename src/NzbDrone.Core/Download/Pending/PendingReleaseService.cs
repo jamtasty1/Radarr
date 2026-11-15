@@ -403,8 +403,10 @@ namespace NzbDrone.Core.Download.Pending
         {
             var pendingReleases = GetPendingReleases(remoteMovie.Movie.Id);
 
-            var existingReports = pendingReleases.Where(r => r.RemoteMovie.Movie.Id == remoteMovie.Movie.Id)
-                                                             .ToList();
+            // Pending releases for other editions of the movie stay pending.
+            var existingReports = pendingReleases.Where(r => r.RemoteMovie.Movie.Id == remoteMovie.Movie.Id &&
+                                                             r.RemoteMovie.EditionSlotId == remoteMovie.EditionSlotId)
+                                                 .ToList();
 
             if (existingReports.Empty())
             {

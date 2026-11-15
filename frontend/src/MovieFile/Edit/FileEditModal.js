@@ -1,7 +1,24 @@
 import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import Modal from 'Components/Modal/Modal';
+import { useMovieEditions } from 'Movie/Editions/useMovieEditions';
 import FileEditModalContentConnector from './FileEditModalContentConnector';
+
+function FileEditModalContentWithEditions(props) {
+  const { data: editions = [], isLoading } = useMovieEditions(props.movieId ?? 0);
+
+  return (
+    <FileEditModalContentConnector
+      {...props}
+      editions={editions}
+      isEditionsLoading={isLoading}
+    />
+  );
+}
+
+FileEditModalContentWithEditions.propTypes = {
+  movieId: PropTypes.number
+};
 
 class FileEditModal extends Component {
 
@@ -20,7 +37,7 @@ class FileEditModal extends Component {
         isOpen={isOpen}
         onModalClose={onModalClose}
       >
-        <FileEditModalContentConnector
+        <FileEditModalContentWithEditions
           {...otherProps}
           onModalClose={onModalClose}
         />

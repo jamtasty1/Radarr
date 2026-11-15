@@ -37,9 +37,11 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
                 return DownloadSpecDecision.Accept();
             }
 
-            if (subject.Movie.MovieFileId != 0 && IsMovieFileMissing(subject.Movie, subject.Movie.MovieFile))
+            var existingFile = subject.ExistingMovieFile;
+
+            if (existingFile != null && IsMovieFileMissing(subject.Movie, existingFile))
             {
-                _logger.Trace("Movie file {0} is missing from disk.", subject.Movie.MovieFile.RelativePath);
+                _logger.Trace("Movie file {0} is missing from disk.", existingFile.RelativePath);
 
                 _logger.Debug("File for this movie exist in the database but not on disk, will be unmonitored on next diskscan. skipping.");
                 return DownloadSpecDecision.Reject(DownloadRejectionReason.MovieNotMonitored, "Movie is not monitored");

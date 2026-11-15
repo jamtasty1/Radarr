@@ -54,9 +54,9 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
 
             var qualityComparer = new QualityModelComparer(profile);
 
-            var file = subject.Movie.MovieFile;
+            var file = subject.ExistingMovieFile;
 
-            if (isPreferredProtocol && (subject.Movie.MovieFileId != 0 && file != null))
+            if (isPreferredProtocol && file != null)
             {
                 var customFormats = _formatService.ParseCustomFormat(file);
                 var upgradeableRejectReason = _qualityUpgradableSpecification.IsUpgradable(profile,
@@ -67,7 +67,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
 
                 if (upgradeableRejectReason == UpgradeableRejectReason.None)
                 {
-                    var revisionUpgrade = _qualityUpgradableSpecification.IsRevisionUpgrade(subject.Movie.MovieFile.Quality, subject.ParsedMovieInfo.Quality);
+                    var revisionUpgrade = _qualityUpgradableSpecification.IsRevisionUpgrade(file.Quality, subject.ParsedMovieInfo.Quality);
 
                     if (revisionUpgrade)
                     {

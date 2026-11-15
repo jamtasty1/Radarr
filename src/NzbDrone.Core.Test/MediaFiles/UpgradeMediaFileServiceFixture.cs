@@ -7,6 +7,7 @@ using NzbDrone.Common.Disk;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MovieImport;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Test.Framework;
 using NzbDrone.Test.Common;
@@ -53,6 +54,34 @@ namespace NzbDrone.Core.Test.MediaFiles
                     Id = 1,
                     RelativePath = @"A.Movie.2019.avi",
                 };
+        }
+
+        [Test]
+        public void should_only_replace_file_in_same_edition_slot()
+        {
+            GivenSingleMovieWithSingleMovieFile();
+
+            // Importing an edition whose slot is empty must leave the standard file alone.
+            _localMovie.EditionSlot = new EditionSlot { MovieEditionId = 7, Name = "Extended", Tracked = true, Monitored = true };
+
+            Subject.UpgradeMovieFile(_movieFile, _localMovie);
+
+            Mocker.GetMock<IRecycleBinProvider>().Verify(v => v.DeleteFile(It.IsAny<string>(), It.IsAny<string>()), Times.Never());
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(It.IsAny<MovieFile>(), It.IsAny<DeleteMediaFileReason>()), Times.Never());
+        }
+
+        [Test]
+        public void should_replace_existing_file_in_edition_slot()
+        {
+            GivenSingleMovieWithSingleMovieFile();
+
+            var extendedFile = new MovieFile { Id = 2, MovieEditionId = 7, RelativePath = @"A.Movie.2019.Extended.avi" };
+            _localMovie.EditionSlot = new EditionSlot { MovieEditionId = 7, Name = "Extended", Tracked = true, Monitored = true, MovieFile = extendedFile };
+
+            Subject.UpgradeMovieFile(_movieFile, _localMovie);
+
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(extendedFile, DeleteMediaFileReason.Upgrade), Times.Once());
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Delete(_localMovie.Movie.MovieFile, It.IsAny<DeleteMediaFileReason>()), Times.Never());
         }
 
         [Test]

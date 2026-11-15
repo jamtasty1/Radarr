@@ -439,6 +439,14 @@ namespace NzbDrone.Core.Movies
         public void Handle(MovieFileAddedEvent message)
         {
             var movie = message.MovieFile.Movie;
+
+            // MovieFileId tracks the standard edition; files for other editions are linked via MovieFile.MovieEditionId.
+            if (message.MovieFile.MovieEditionId != 0)
+            {
+                _logger.Info("Assigning file [{0}] to an edition of movie [{1}]", message.MovieFile.RelativePath, movie);
+                return;
+            }
+
             movie.MovieFileId = message.MovieFile.Id;
             _movieRepository.Update(movie);
 

@@ -168,6 +168,7 @@ export const actionHandlers = handleThunks({
         quality: item.quality,
         languages: item.languages,
         releaseGroup: item.releaseGroup,
+        edition: item.edition ?? '',
         indexerFlags: item.indexerFlags,
         downloadId: item.downloadId
       };

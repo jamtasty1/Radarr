@@ -10,6 +10,8 @@ export interface InteractiveImportCommandOptions {
   folderName: string;
   movieId: number;
   releaseGroup?: string;
+  // Empty string means the standard edition.
+  edition?: string;
   quality: QualityModel;
   languages: Language[];
   indexerFlags: number;
@@ -24,6 +26,9 @@ interface InteractiveImport extends ModelBase {
   name: string;
   size: number;
   releaseGroup: string;
+  edition?: string;
+  // Edition slot the file would fill: 0 standard, -1 not tracked by the movie.
+  movieEditionId?: number;
   quality: QualityModel;
   languages: Language[];
   movie?: Movie;

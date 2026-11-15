@@ -29,17 +29,11 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Specifications
             var qualityProfile = localMovie.Movie.QualityProfile;
             var qualityComparer = new QualityModelComparer(qualityProfile);
 
-            if (localMovie.Movie.MovieFileId > 0)
+            // Compare against the file in the same edition slot only.
+            var movieFile = localMovie.ExistingMovieFile;
+
+            if (movieFile != null)
             {
-                var movieFile = localMovie.Movie.MovieFile;
-
-                if (movieFile == null)
-                {
-                    _logger.Trace("Unable to get movie file details from the DB. MovieId: {0} MovieFileId: {1}", localMovie.Movie.Id, localMovie.Movie.MovieFileId);
-
-                    return ImportSpecDecision.Accept();
-                }
-
                 var qualityCompare = qualityComparer.Compare(localMovie.Quality.Quality, movieFile.Quality.Quality);
 
                 if (qualityCompare < 0)

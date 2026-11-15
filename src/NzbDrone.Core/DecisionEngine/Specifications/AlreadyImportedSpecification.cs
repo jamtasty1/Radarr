@@ -4,6 +4,7 @@ using NLog;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.History;
 using NzbDrone.Core.Indexers;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 
 namespace NzbDrone.Core.DecisionEngine.Specifications
@@ -12,14 +13,17 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
     {
         private readonly IHistoryService _historyService;
         private readonly IConfigService _configService;
+        private readonly IMovieEditionService _movieEditionService;
         private readonly Logger _logger;
 
         public AlreadyImportedSpecification(IHistoryService historyService,
                                             IConfigService configService,
+                                            IMovieEditionService movieEditionService,
                                             Logger logger)
         {
             _historyService = historyService;
             _configService = configService;
+            _movieEditionService = movieEditionService;
             _logger = logger;
         }
 
@@ -41,13 +45,16 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
             _logger.Debug("Performing already imported check on report");
             if (movie != null)
             {
-                if (!movie.HasFile)
+                if (!subject.HasExistingFile)
                 {
-                    _logger.Debug("Skipping already imported check for movie without file");
+                    _logger.Debug("Skipping already imported check for movie without file in this edition");
                     return DownloadSpecDecision.Accept();
                 }
 
-                var historyForMovie = _historyService.GetByMovieId(movie.Id, null);
+                // Only history for the same edition is relevant.
+                var historyForMovie = _historyService.GetByMovieId(movie.Id, null)
+                    .Where(h => _movieEditionService.ResolveSlotIdForTitle(movie, h.SourceTitle) == subject.EditionSlotId)
+                    .ToList();
                 var lastGrabbed = historyForMovie.FirstOrDefault(h => h.EventType == MovieHistoryEventType.Grabbed);
 
                 if (lastGrabbed == null)

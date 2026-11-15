@@ -27,16 +27,10 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         {
             var qualityProfile = subject.Movie.QualityProfile;
 
-            if (subject.Movie.MovieFileId != 0)
+            var file = subject.ExistingMovieFile;
+
+            if (file != null)
             {
-                var file = subject.Movie.MovieFile;
-
-                if (file == null)
-                {
-                    _logger.Debug("File is no longer available, skipping this file.");
-                    return DownloadSpecDecision.Accept();
-                }
-
                 file.Movie = subject.Movie;
                 var customFormats = _formatService.ParseCustomFormat(file);
                 _logger.Debug("Comparing file quality with report. Existing file is {0} [{1}]", file.Quality, customFormats.ConcatToString());

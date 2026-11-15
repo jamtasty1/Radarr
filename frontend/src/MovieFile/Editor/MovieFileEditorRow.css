@@ -45,6 +45,7 @@
   width: 165px;
 }
 
+.edition,
 .releaseGroup,
 .dateAdded {
   composes: cell from '~Components/Table/Cells/TableRowCell.css';

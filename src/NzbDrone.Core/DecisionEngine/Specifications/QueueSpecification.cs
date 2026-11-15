@@ -37,8 +37,11 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         public DownloadSpecDecision IsSatisfiedBy(RemoteMovie subject, ReleaseDecisionInformation information)
         {
             var queue = _queueService.GetQueue();
+
+            // A queued download for a different edition of the movie doesn't compete with this release.
             var matchingMovies = queue.Where(q => q.RemoteMovie?.Movie != null &&
-                                                   q.RemoteMovie.Movie.Id == subject.Movie.Id)
+                                                   q.RemoteMovie.Movie.Id == subject.Movie.Id &&
+                                                   q.RemoteMovie.EditionSlotId == subject.EditionSlotId)
                                        .ToList();
 
             foreach (var queueItem in matchingMovies)

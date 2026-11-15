@@ -15,6 +15,10 @@ namespace Radarr.Api.V3.ManualImport
         public QualityModel Quality { get; set; }
         public List<Language> Languages { get; set; }
         public string ReleaseGroup { get; set; }
+
+        // null keeps the parsed edition; empty means the standard edition.
+        public string Edition { get; set; }
+        public int MovieEditionId { get; set; }
         public string DownloadId { get; set; }
         public List<CustomFormatResource> CustomFormats { get; set; }
         public int CustomFormatScore { get; set; }

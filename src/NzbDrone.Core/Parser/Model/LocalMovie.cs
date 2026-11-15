@@ -7,6 +7,7 @@ using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.Parser.Model
@@ -29,6 +30,20 @@ namespace NzbDrone.Core.Parser.Model
         public bool SceneSource { get; set; }
         public string ReleaseGroup { get; set; }
         public string Edition { get; set; }
+
+        // Which edition slot of the movie this file is (standard or a tracked edition).
+        public EditionSlot EditionSlot { get; set; }
+
+        // The file this one would replace: the one in the same edition slot.
+        public MovieFile ExistingMovieFile => EditionSlot != null
+            ? EditionSlot.MovieFile
+            : Movie?.MovieFileId > 0 ? Movie.MovieFile : null;
+
+        // Standard edition keeps Movie.HasFile semantics (MovieFileId set, file object may not be loaded).
+        public bool HasExistingFile => EditionSlot is { IsStandard: false }
+            ? EditionSlot.MovieFile != null
+            : Movie?.HasFile == true;
+
         public string SceneName { get; set; }
         public bool OtherVideoFiles { get; set; }
         public List<CustomFormat> CustomFormats { get; set; } = [];
@@ -75,6 +90,7 @@ namespace NzbDrone.Core.Parser.Model
                 Movie = Movie,
                 ReleaseGroup = ReleaseGroup,
                 Edition = Edition,
+                MovieEditionId = EditionSlot is { Tracked: true } ? EditionSlot.MovieEditionId : EditionSlot.StandardEditionId,
                 Languages = Languages,
                 IndexerFlags = IndexerFlags,
                 SceneName = SceneName,

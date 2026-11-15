@@ -181,5 +181,38 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
             Subject.BuildFileName(_movie, _movieFile)
                    .Should().Be(expected);
         }
+
+        [Test]
+        public void should_append_edition_for_non_standard_edition_file_when_format_has_no_edition_token()
+        {
+            _movieFile.Edition = "Director's Cut";
+            _movieFile.MovieEditionId = 3;
+            _namingConfig.StandardMovieFormat = "{Movie Title}";
+
+            Subject.BuildFileName(_movie, _movieFile)
+                   .Should().Be("Movie Title {edition-Director's Cut}");
+        }
+
+        [Test]
+        public void should_not_append_edition_for_standard_edition_file()
+        {
+            _movieFile.Edition = "Remastered";
+            _movieFile.MovieEditionId = 0;
+            _namingConfig.StandardMovieFormat = "{Movie Title}";
+
+            Subject.BuildFileName(_movie, _movieFile)
+                   .Should().Be("Movie Title");
+        }
+
+        [Test]
+        public void should_not_append_edition_twice_when_format_has_edition_token()
+        {
+            _movieFile.Edition = "Extended";
+            _movieFile.MovieEditionId = 3;
+            _namingConfig.StandardMovieFormat = "{Movie Title} {edition-{Edition Tags}}";
+
+            Subject.BuildFileName(_movie, _movieFile)
+                   .Should().Be("Movie Title {edition-Extended}");
+        }
     }
 }

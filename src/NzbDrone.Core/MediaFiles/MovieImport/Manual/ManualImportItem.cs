@@ -18,6 +18,10 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
         public QualityModel Quality { get; set; } = new();
         public List<Language> Languages { get; set; } = new();
         public string ReleaseGroup { get; set; }
+        public string Edition { get; set; }
+
+        // The edition slot the file would fill: 0 standard, -1 an edition the movie doesn't track.
+        public int MovieEditionId { get; set; }
         public string DownloadId { get; set; }
         public List<CustomFormat> CustomFormats { get; set; } = new();
         public int CustomFormatScore { get; set; }

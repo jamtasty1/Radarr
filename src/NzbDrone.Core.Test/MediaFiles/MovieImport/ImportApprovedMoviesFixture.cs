@@ -14,6 +14,7 @@ using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.MediaFiles.MovieImport;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
@@ -185,6 +186,48 @@ namespace NzbDrone.Core.Test.MediaFiles.MovieImport
             results.Should().HaveCount(all.Count);
             results.Should().ContainSingle(d => d.Result == ImportResultType.Imported);
             results.Should().ContainSingle(d => d.Result == ImportResultType.Imported && d.ImportDecision.LocalMovie.Size == fileDecision.LocalMovie.Size);
+        }
+
+        [Test]
+        public void should_import_one_file_per_edition_of_a_movie()
+        {
+            GivenExistingFileOnDisk();
+
+            var standardDecision = _approvedDecisions.First();
+            standardDecision.LocalMovie.Size = 1.Gigabytes();
+
+            var extendedDecision = new ImportDecision(
+                new LocalMovie
+                {
+                    Movie = standardDecision.LocalMovie.Movie,
+                    Path = @"C:\Test\TV\30 Rock\30 Rock - Extended.avi".AsOsAgnostic(),
+                    Quality = new QualityModel(),
+                    Size = 2.Gigabytes(),
+                    Edition = "Extended",
+                    EditionSlot = new EditionSlot { MovieEditionId = 3, Name = "Extended", Tracked = true, Monitored = true }
+                });
+
+            var results = Subject.Import(new List<ImportDecision> { standardDecision, extendedDecision }, false);
+
+            results.Where(d => d.Result == ImportResultType.Imported).Should().HaveCount(2);
+
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Add(It.Is<MovieFile>(f => f.MovieEditionId == 3)), Times.Once());
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Add(It.Is<MovieFile>(f => f.MovieEditionId == 0)), Times.Once());
+        }
+
+        [Test]
+        public void should_not_import_file_for_untracked_edition()
+        {
+            GivenExistingFileOnDisk();
+
+            var decision = _approvedDecisions.First();
+            decision.LocalMovie.Edition = "IMAX";
+            decision.LocalMovie.EditionSlot = EditionSlot.Untracked("IMAX");
+
+            var results = Subject.Import(new List<ImportDecision> { decision }, false);
+
+            results.Should().NotContain(d => d.Result == ImportResultType.Imported);
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Add(It.IsAny<MovieFile>()), Times.Never());
         }
 
         [Test]

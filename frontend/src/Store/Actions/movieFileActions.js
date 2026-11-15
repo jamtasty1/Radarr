@@ -4,13 +4,14 @@ import { createAction } from 'redux-actions';
 import { batchActions } from 'redux-batched-actions';
 import Icon from 'Components/Icon';
 import IconButton from 'Components/Link/IconButton';
-import { icons, sortDirections } from 'Helpers/Props';
+import { icons, messageTypes, sortDirections } from 'Helpers/Props';
 import movieEntities from 'Movie/movieEntities';
 import createSetClientSideCollectionSortReducer from 'Store/Actions/Creators/Reducers/createSetClientSideCollectionSortReducer';
 import createSetTableOptionReducer from 'Store/Actions/Creators/Reducers/createSetTableOptionReducer';
 import { createThunk, handleThunks } from 'Store/thunks';
 import createAjaxRequest from 'Utilities/createAjaxRequest';
 import translate from 'Utilities/String/translate';
+import { showMessage } from './appActions';
 import { removeItem, set, updateItem } from './baseActions';
 import createFetchHandler from './Creators/createFetchHandler';
 import createHandleActions from './Creators/createHandleActions';
@@ -42,6 +43,11 @@ export const defaultState = {
       label: () => translate('RelativePath'),
       isVisible: true,
       isSortable: true
+    },
+    {
+      name: 'edition',
+      label: () => translate('Edition'),
+      isVisible: true
     },
     {
       name: 'videoCodec',
@@ -274,6 +280,7 @@ export const actionHandlers = handleThunks({
           props.languages = movieFile.languages;
           props.quality = movieFile.quality;
           props.edition = movieFile.edition;
+          props.movieEditionId = movieFile.movieEditionId;
           props.releaseGroup = movieFile.releaseGroup;
           props.indexerFlags = movieFile.indexerFlags;
 
@@ -298,6 +305,20 @@ export const actionHandlers = handleThunks({
         isSaving: false,
         saveError: xhr
       }));
+
+      // The edit modal has already closed, so surface failures such as an
+      // edition that already holds another file.
+      const message = xhr.responseJSON?.message;
+
+      if (message) {
+        dispatch(showMessage({
+          id: 'updateMovieFiles',
+          name: 'updateMovieFiles',
+          message,
+          type: messageTypes.ERROR,
+          hideAfter: 8
+        }));
+      }
     });
   }
 });

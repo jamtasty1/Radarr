@@ -2,18 +2,45 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
+import { getEditionOptions } from 'Movie/Editions/useMovieEditions';
 import { updateMovieFiles } from 'Store/Actions/movieFileActions';
 import { fetchQualityProfileSchema } from 'Store/Actions/settingsActions';
 import createMovieFileSelector from 'Store/Selectors/createMovieFileSelector';
 import getQualities from 'Utilities/Quality/getQualities';
+import translate from 'Utilities/String/translate';
 import FileEditModalContent from './FileEditModalContent';
+
+// Each edition holds one file, so editions already filled by another file
+// can't be chosen.
+function getEditionSlotOptions(movieFile, movieFiles, editions) {
+  if (!editions.length) {
+    return [];
+  }
+
+  return getEditionOptions(editions).map(({ key, value }) => {
+    const occupant = movieFiles.find((f) => {
+      return f.movieId === movieFile.movieId &&
+        f.id !== movieFile.id &&
+        (f.movieEditionId ?? 0) === key;
+    });
+
+    return {
+      key,
+      value,
+      hint: occupant ? translate('EditionHasFile') : undefined,
+      isDisabled: !!occupant
+    };
+  });
+}
 
 function createMapStateToProps() {
   return createSelector(
     createMovieFileSelector(),
     (state) => state.settings.qualityProfiles,
     (state) => state.settings.languages,
-    (movieFile, qualityProfiles, languages) => {
+    (state) => state.movieFiles.items,
+    (state, { editions }) => editions,
+    (movieFile, qualityProfiles, languages, movieFiles, editions = []) => {
 
       const filterItems = ['Any', 'Original'];
       const filteredLanguages = languages.items.filter((lang) => !filterItems.includes(lang.name));
@@ -32,6 +59,8 @@ function createMapStateToProps() {
         languages: filteredLanguages,
         indexerFlags: movieFile.indexerFlags,
         edition: movieFile.edition,
+        movieEditionId: movieFile.movieEditionId ?? 0,
+        editionOptions: getEditionSlotOptions(movieFile, movieFiles, editions),
         releaseGroup: movieFile.releaseGroup,
         relativePath: movieFile.relativePath
       };
@@ -65,9 +94,12 @@ class FileEditModalContentConnector extends Component {
       proper,
       languageIds,
       edition,
+      movieEditionId,
       releaseGroup,
       indexerFlags
     } = payload;
+
+    const hasEditions = this.props.editionOptions.length > 0;
 
     const quality = this.props.qualities.find((item) => item.id === qualityId);
 
@@ -92,6 +124,7 @@ class FileEditModalContentConnector extends Component {
         languages,
         indexerFlags,
         edition,
+        movieEditionId: hasEditions ? movieEditionId : undefined,
         releaseGroup,
         quality: {
           quality,
@@ -128,6 +161,8 @@ FileEditModalContentConnector.propTypes = {
   qualityId: PropTypes.number.isRequired,
   real: PropTypes.bool.isRequired,
   edition: PropTypes.string.isRequired,
+  movieEditionId: PropTypes.number.isRequired,
+  editionOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
   releaseGroup: PropTypes.string.isRequired,
   relativePath: PropTypes.string.isRequired,
   proper: PropTypes.bool.isRequired,

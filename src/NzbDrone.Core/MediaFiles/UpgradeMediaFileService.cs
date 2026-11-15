@@ -39,7 +39,8 @@ namespace NzbDrone.Core.MediaFiles
 
             var moveFileResult = new MovieFileMoveResult();
 
-            var existingFile = localMovie.Movie.MovieFileId > 0 ? localMovie.Movie.MovieFile : null;
+            // Only the file in the same edition slot is replaced; other editions are left alone.
+            var existingFile = localMovie.ExistingMovieFile;
 
             var rootFolder = _diskProvider.GetParentFolder(localMovie.Movie.Path);
 

@@ -10,6 +10,10 @@ import Popover from 'Components/Tooltip/Popover';
 import Tooltip from 'Components/Tooltip/Tooltip';
 import useModalOpenState from 'Helpers/Hooks/useModalOpenState';
 import { icons, kinds, tooltipPositions } from 'Helpers/Props';
+import {
+  getEditionName,
+  useMovieEditions,
+} from 'Movie/Editions/useMovieEditions';
 import IndexerFlags from 'Movie/IndexerFlags';
 import MovieFormats from 'Movie/MovieFormats';
 import MovieLanguages from 'Movie/MovieLanguages';
@@ -28,6 +32,9 @@ interface MovieFileRowProps
   extends Pick<
     MovieFile,
     | 'id'
+    | 'movieId'
+    | 'movieEditionId'
+    | 'edition'
     | 'relativePath'
     | 'size'
     | 'releaseGroup'
@@ -47,6 +54,9 @@ interface MovieFileRowProps
 function MovieFileEditorRow(props: MovieFileRowProps) {
   const {
     id,
+    movieId,
+    movieEditionId,
+    edition,
     mediaInfo,
     relativePath,
     size,
@@ -84,6 +94,13 @@ function MovieFileEditorRow(props: MovieFileRowProps) {
     setRemoveMovieFileModalClosed();
   }, [id, onDeleteMovieFile, setRemoveMovieFileModalClosed]);
 
+  // With editions tracked, show which edition the file fills; otherwise the
+  // parsed edition text.
+  const { data: editions } = useMovieEditions(movieId);
+  const editionName = editions?.length
+    ? getEditionName(editions, movieEditionId)
+    : edition;
+
   const showQualityPlaceholder = !quality;
   const showLanguagePlaceholder = !languages;
 
@@ -104,6 +121,14 @@ function MovieFileEditorRow(props: MovieFileRowProps) {
               title={relativePath}
             >
               {relativePath}
+            </TableRowCell>
+          );
+        }
+
+        if (name === 'edition') {
+          return (
+            <TableRowCell key={name} className={styles.edition}>
+              {editionName}
             </TableRowCell>
           );
         }
@@ -281,6 +306,7 @@ function MovieFileEditorRow(props: MovieFileRowProps) {
       <FileEditModal
         isOpen={isMovieFileEditModalOpen}
         movieFileId={id}
+        movieId={movieId}
         onModalClose={onMovieFileEditModalClose}
       />
 

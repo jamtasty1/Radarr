@@ -27,7 +27,8 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
         {
             var qualityProfile = subject.Movie.QualityProfile;
 
-            var file = subject.Movie.MovieFile;
+            // Compare against the file in the release's edition slot only.
+            var file = subject.ExistingMovieFile;
 
             if (file == null)
             {

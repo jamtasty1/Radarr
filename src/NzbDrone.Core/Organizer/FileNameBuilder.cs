@@ -49,6 +49,8 @@ namespace NzbDrone.Core.Organizer
         private static readonly Regex FileNameCleanupRegex = new Regex(@"([- ._])(\1)+", RegexOptions.Compiled);
         private static readonly Regex TrimSeparatorsRegex = new Regex(@"[- ._]+$", RegexOptions.Compiled);
 
+        private static readonly Regex EditionTagsTokenRegex = new Regex(@"\{[^}]*Edition[- ._]?Tags", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
         private static readonly Regex ScenifyRemoveChars = new Regex(@"(?<=\s)(,|<|>|\/|\\|;|:|'|""|\||`|’|~|!|\?|@|$|%|^|\*|-|_|=){1}(?=\s)|('|`|’|:|\?|,)(?=(?:(?:s|m|t|ve|ll|d|re)\s)|\s|$)|(\(|\)|\[|\]|\{|\})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         private static readonly Regex ScenifyReplaceChars = new Regex(@"[\/]", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
@@ -155,7 +157,27 @@ namespace NzbDrone.Core.Organizer
                 }
             }
 
+            AppendEditionIfMissing(components, pattern, movieFile);
+
             return Path.Combine(components.ToArray());
+        }
+
+        // Files for a movie's non-standard editions share its folder, so they must not end up with the
+        // same name as the standard file. If the naming format has no edition token, tag the name the
+        // way Plex recognises editions.
+        private static void AppendEditionIfMissing(List<string> components, string pattern, MovieFile movieFile)
+        {
+            if (movieFile.MovieEditionId == 0 ||
+                movieFile.Edition.IsNullOrWhiteSpace() ||
+                components.Count == 0 ||
+                EditionTagsTokenRegex.IsMatch(pattern))
+            {
+                return;
+            }
+
+            var edition = CleanFileName(GetEditionToken(movieFile));
+
+            components[^1] = $"{components[^1]} {{edition-{edition}}}";
         }
 
         public string BuildFilePath(Movie movie, string fileName, string extension)

@@ -12,6 +12,8 @@ export interface MovieFile extends ModelBase {
   dateAdded: string;
   sceneName: string;
   releaseGroup: string;
+  edition?: string;
+  movieEditionId?: number;
   languages: Language[];
   quality: QualityModel;
   customFormats: CustomFormat[];

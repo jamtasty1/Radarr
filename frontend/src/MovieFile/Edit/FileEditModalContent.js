@@ -29,6 +29,7 @@ class FileEditModalContent extends Component {
       proper,
       real,
       edition,
+      movieEditionId,
       releaseGroup
     } = props;
 
@@ -39,6 +40,7 @@ class FileEditModalContent extends Component {
       proper,
       real,
       edition,
+      movieEditionId,
       releaseGroup
     };
   }
@@ -48,6 +50,10 @@ class FileEditModalContent extends Component {
 
   onQualityChange = ({ value }) => {
     this.setState({ qualityId: parseInt(value) });
+  };
+
+  onMovieEditionIdChange = ({ value }) => {
+    this.setState({ movieEditionId: parseInt(value) });
   };
 
   onInputChange = ({ name, value }) => {
@@ -68,6 +74,7 @@ class FileEditModalContent extends Component {
       error,
       qualities,
       languages,
+      editionOptions,
       relativePath,
       onModalClose
     } = this.props;
@@ -79,6 +86,7 @@ class FileEditModalContent extends Component {
       proper,
       real,
       edition,
+      movieEditionId,
       releaseGroup
     } = this.state;
 
@@ -175,6 +183,22 @@ class FileEditModalContent extends Component {
                   />
                 </FormGroup>
 
+                {
+                  editionOptions.length > 0 &&
+                    <FormGroup>
+                      <FormLabel>{translate('TrackedEdition')}</FormLabel>
+
+                      <FormInputGroup
+                        type={inputTypes.SELECT}
+                        name="movieEditionId"
+                        value={movieEditionId}
+                        values={editionOptions}
+                        helpText={translate('TrackedEditionHelpText')}
+                        onChange={this.onMovieEditionIdChange}
+                      />
+                    </FormGroup>
+                }
+
                 <FormGroup>
                   <FormLabel>{translate('Edition')}</FormLabel>
 
@@ -223,6 +247,8 @@ FileEditModalContent.propTypes = {
   real: PropTypes.bool.isRequired,
   relativePath: PropTypes.string.isRequired,
   edition: PropTypes.string.isRequired,
+  movieEditionId: PropTypes.number.isRequired,
+  editionOptions: PropTypes.arrayOf(PropTypes.object).isRequired,
   releaseGroup: PropTypes.string.isRequired,
   languageIds: PropTypes.arrayOf(PropTypes.number).isRequired,
   languages: PropTypes.arrayOf(PropTypes.object).isRequired,

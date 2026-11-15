@@ -10,6 +10,7 @@ using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
@@ -150,6 +151,24 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
 
             GivenQueue(new List<RemoteMovie> { remoteMovie });
             Subject.IsSatisfiedBy(_remoteMovie, new()).Accepted.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_return_true_when_better_release_in_queue_is_for_another_edition()
+        {
+            _movie.QualityProfile.Cutoff = Quality.Bluray1080p.Id;
+
+            var remoteMovie = Builder<RemoteMovie>.CreateNew()
+                                                      .With(r => r.Movie = _movie)
+                                                      .With(r => r.ParsedMovieInfo = new ParsedMovieInfo
+                                                      {
+                                                          Quality = new QualityModel(Quality.HDTV720p)
+                                                      })
+                                                      .With(r => r.EditionSlot = new EditionSlot { MovieEditionId = 3, Name = "Extended", Tracked = true })
+                                                      .Build();
+
+            GivenQueue(new List<RemoteMovie> { remoteMovie });
+            Subject.IsSatisfiedBy(_remoteMovie, new()).Accepted.Should().BeTrue();
         }
 
         [Test]

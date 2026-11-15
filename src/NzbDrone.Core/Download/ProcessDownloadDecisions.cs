@@ -166,12 +166,12 @@ namespace NzbDrone.Core.Download
 
         private bool IsMovieProcessed(List<DownloadDecision> decisions, DownloadDecision report)
         {
+            // One grab per edition of a movie, so a search can fill several editions at once.
             var movieId = report.RemoteMovie.Movie.Id;
+            var editionSlotId = report.RemoteMovie.EditionSlotId;
 
-            return decisions.Select(r => r.RemoteMovie.Movie)
-                            .Select(e => e.Id)
-                            .ToList()
-                            .Contains(movieId);
+            return decisions.Any(r => r.RemoteMovie.Movie.Id == movieId &&
+                                      r.RemoteMovie.EditionSlotId == editionSlotId);
         }
 
         private void PreparePending(List<Tuple<DownloadDecision, PendingReleaseReason>> queue, List<DownloadDecision> grabbed, List<DownloadDecision> pending, DownloadDecision report, PendingReleaseReason reason)

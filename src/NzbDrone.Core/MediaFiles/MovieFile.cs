@@ -24,6 +24,9 @@ namespace NzbDrone.Core.MediaFiles
         public IndexerFlags IndexerFlags { get; set; }
         public MediaInfoModel MediaInfo { get; set; }
         public string Edition { get; set; }
+
+        // 0 = the movie's standard edition, otherwise the MovieEdition this file fills.
+        public int MovieEditionId { get; set; }
         public Movie Movie { get; set; }
         public List<Language> Languages { get; set; }
 

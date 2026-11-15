@@ -1,0 +1,71 @@
+.container {
+  border: 1px solid var(--borderColor);
+  border-radius: 4px;
+  background-color: var(--inputBackgroundColor);
+}
+
+.monitored {
+  composes: cell from '~Components/Table/Cells/TableRowCell.css';
+
+  width: 42px;
+}
+
+.name {
+  composes: cell from '~Components/Table/Cells/TableRowCell.css';
+
+  width: 220px;
+  white-space: nowrap;
+}
+
+/* Take the remaining width and let the file name truncate rather than
+   pushing the action buttons out of view. */
+.status {
+  composes: cell from '~Components/Table/Cells/TableRowCell.css';
+
+  max-width: 0;
+
+  width: 100%;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 0;
+}
+
+.path {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.actions {
+  composes: cell from '~Components/Table/Cells/TableRowCell.css';
+
+  width: 70px;
+  white-space: nowrap;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+
+  padding: 10px;
+  border-top: 1px solid var(--borderColor);
+}
+
+.help {
+  flex: 1 1 300px;
+  color: var(--helpTextColor);
+}
+
+.addButton {
+  composes: button from '~Components/Link/Button.css';
+
+  margin-left: auto;
+}

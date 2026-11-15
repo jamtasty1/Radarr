@@ -8,6 +8,7 @@ interface CssExports {
   'customFormatScore': string;
   'dateAdded': string;
   'download': string;
+  'edition': string;
   'formats': string;
   'indexerFlags': string;
   'language': string;

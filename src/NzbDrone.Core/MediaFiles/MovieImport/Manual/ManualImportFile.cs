@@ -13,6 +13,9 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
         public QualityModel Quality { get; set; } = new();
         public List<Language> Languages { get; set; } = [];
         public string ReleaseGroup { get; set; }
+
+        // Overrides the parsed edition when set; "" means the standard edition.
+        public string Edition { get; set; }
         public int IndexerFlags { get; set; }
         public string DownloadId { get; set; }
         public int MovieId { get; set; }

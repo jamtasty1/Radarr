@@ -38,10 +38,10 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return DownloadSpecDecision.Accept();
             }
 
-            if (subject.Movie.MovieFileId != 0)
-            {
-                var file = subject.Movie.MovieFile;
+            var file = subject.ExistingMovieFile;
 
+            if (file != null)
+            {
                 if (_upgradableSpecification.IsRevisionUpgrade(file.Quality, subject.ParsedMovieInfo.Quality))
                 {
                     var releaseGroup = subject.ParsedMovieInfo.ReleaseGroup;

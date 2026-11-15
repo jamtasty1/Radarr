@@ -37,12 +37,12 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
                 return DownloadSpecDecision.Accept();
             }
 
-            if (subject.Movie.MovieFile == null)
+            var file = subject.ExistingMovieFile;
+
+            if (file == null)
             {
                 return DownloadSpecDecision.Accept();
             }
-
-            var file = subject.Movie.MovieFile;
 
             if (_qualityUpgradableSpecification.IsRevisionUpgrade(file.Quality, subject.ParsedMovieInfo.Quality))
             {

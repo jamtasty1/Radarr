@@ -92,6 +92,11 @@ const COLUMNS = [
     isVisible: true,
   },
   {
+    name: 'edition',
+    label: () => translate('Edition'),
+    isVisible: true,
+  },
+  {
     name: 'quality',
     label: () => translate('Quality'),
     isSortable: true,
@@ -444,6 +449,8 @@ function InteractiveImportModalContent(
         const {
           movie,
           releaseGroup,
+          edition,
+          movieEditionId,
           quality,
           languages,
           indexerFlags,
@@ -480,6 +487,12 @@ function InteractiveImportModalContent(
             existingFiles.push({
               id: movieFileId,
               releaseGroup,
+              edition,
+              // -1 is an edition the movie doesn't track; leave the slot alone.
+              movieEditionId:
+                movieEditionId !== undefined && movieEditionId >= 0
+                  ? movieEditionId
+                  : undefined,
               quality,
               languages,
               indexerFlags,
@@ -494,6 +507,7 @@ function InteractiveImportModalContent(
           folderName: item.folderName,
           movieId: movie.id,
           releaseGroup,
+          edition: edition ?? '',
           quality,
           languages,
           indexerFlags,

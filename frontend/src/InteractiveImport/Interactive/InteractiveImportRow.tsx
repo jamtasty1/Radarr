@@ -8,12 +8,17 @@ import Column from 'Components/Table/Column';
 import TableRow from 'Components/Table/TableRow';
 import Popover from 'Components/Tooltip/Popover';
 import { icons, kinds, tooltipPositions } from 'Helpers/Props';
+import SelectEditionModal from 'InteractiveImport/Edition/SelectEditionModal';
 import SelectIndexerFlagsModal from 'InteractiveImport/IndexerFlags/SelectIndexerFlagsModal';
 import SelectLanguageModal from 'InteractiveImport/Language/SelectLanguageModal';
 import SelectMovieModal from 'InteractiveImport/Movie/SelectMovieModal';
 import SelectQualityModal from 'InteractiveImport/Quality/SelectQualityModal';
 import SelectReleaseGroupModal from 'InteractiveImport/ReleaseGroup/SelectReleaseGroupModal';
 import Language from 'Language/Language';
+import {
+  getEditionName,
+  useMovieEditions,
+} from 'Movie/Editions/useMovieEditions';
 import IndexerFlags from 'Movie/IndexerFlags';
 import Movie from 'Movie/Movie';
 import MovieFormats from 'Movie/MovieFormats';
@@ -36,6 +41,7 @@ import styles from './InteractiveImportRow.css';
 type SelectType =
   | 'movie'
   | 'releaseGroup'
+  | 'edition'
   | 'quality'
   | 'language'
   | 'indexerFlags';
@@ -50,6 +56,8 @@ interface InteractiveImportRowProps {
   relativePath: string;
   movie?: Movie;
   releaseGroup?: string;
+  edition?: string;
+  movieEditionId?: number;
   quality?: QualityModel;
   languages?: Language[];
   size: number;
@@ -75,6 +83,8 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
     quality,
     languages,
     releaseGroup,
+    edition,
+    movieEditionId,
     size,
     customFormats,
     customFormatScore,
@@ -195,6 +205,27 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
     [id, dispatch, setSelectModalOpen, selectRowAfterChange]
   );
 
+  const onSelectEditionPress = useCallback(() => {
+    setSelectModalOpen('edition');
+  }, [setSelectModalOpen]);
+
+  const onEditionSelect = useCallback(
+    (edition: string) => {
+      dispatch(
+        updateInteractiveImportItem({
+          id,
+          edition,
+        })
+      );
+
+      dispatch(reprocessInteractiveImportItems({ ids: [id] }));
+
+      setSelectModalOpen(null);
+      selectRowAfterChange();
+    },
+    [id, dispatch, setSelectModalOpen, selectRowAfterChange]
+  );
+
   const onSelectQualityPress = useCallback(() => {
     setSelectModalOpen('quality');
   }, [setSelectModalOpen]);
@@ -258,6 +289,20 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
     [id, dispatch, setSelectModalOpen, selectRowAfterChange]
   );
 
+  const { data: editions = [] } = useMovieEditions(movie?.id ?? 0);
+  const hasEditions = editions.length > 0;
+  const isEditionUntracked = hasEditions && movieEditionId === -1;
+
+  let editionLabel = edition;
+
+  if (isEditionUntracked) {
+    editionLabel = translate('EditionNotTracked', { edition: edition ?? '' });
+  } else if (hasEditions) {
+    editionLabel = getEditionName(editions, movieEditionId);
+  }
+
+  const showEditionPlaceholder = isSelected && !editionLabel;
+
   const movieTitle = movie ? movie.title : '';
 
   const showMoviePlaceholder = isSelected && !movie;
@@ -300,6 +345,18 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
           <InteractiveImportRowCellPlaceholder isOptional={true} />
         ) : (
           releaseGroup
+        )}
+      </TableRowCellButton>
+
+      <TableRowCellButton
+        className={isEditionUntracked ? styles.untrackedEdition : undefined}
+        title={translate('ClickToChangeEdition')}
+        onPress={onSelectEditionPress}
+      >
+        {showEditionPlaceholder ? (
+          <InteractiveImportRowCellPlaceholder isOptional={true} />
+        ) : (
+          editionLabel
         )}
       </TableRowCellButton>
 
@@ -399,6 +456,16 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
         releaseGroup={releaseGroup ?? ''}
         modalTitle={modalTitle}
         onReleaseGroupSelect={onReleaseGroupSelect}
+        onModalClose={onSelectModalClose}
+      />
+
+      <SelectEditionModal
+        isOpen={selectModalOpen === 'edition'}
+        edition={edition ?? ''}
+        movieEditionId={movieEditionId}
+        editions={editions}
+        modalTitle={modalTitle}
+        onEditionSelect={onEditionSelect}
         onModalClose={onSelectModalClose}
       />
 

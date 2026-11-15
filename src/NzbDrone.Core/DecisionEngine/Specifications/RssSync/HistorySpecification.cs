@@ -1,9 +1,11 @@
 using System;
+using System.Linq;
 using NLog;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Core.Configuration;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.History;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 
 namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
@@ -14,18 +16,21 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
         private readonly UpgradableSpecification _upgradableSpecification;
         private readonly ICustomFormatCalculationService _formatService;
         private readonly IConfigService _configService;
+        private readonly IMovieEditionService _movieEditionService;
         private readonly Logger _logger;
 
         public HistorySpecification(IHistoryService historyService,
                                     UpgradableSpecification upgradableSpecification,
                                     ICustomFormatCalculationService formatService,
                                     IConfigService configService,
+                                    IMovieEditionService movieEditionService,
                                     Logger logger)
         {
             _historyService = historyService;
             _upgradableSpecification = upgradableSpecification;
             _formatService = formatService;
             _configService = configService;
+            _movieEditionService = movieEditionService;
             _logger = logger;
         }
 
@@ -46,7 +51,12 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
             _logger.Debug("Performing history status check on report");
 
             _logger.Debug("Checking current status of movie [{0}] in history", subject.Movie.Id);
-            var mostRecent = _historyService.MostRecentForMovie(subject.Movie.Id);
+
+            // With editions, only the most recent event for the same edition matters.
+            var mostRecent = _movieEditionService.HasEditions(subject.Movie.Id)
+                ? _historyService.GetByMovieId(subject.Movie.Id, null)
+                    .FirstOrDefault(h => _movieEditionService.ResolveSlotIdForTitle(subject.Movie, h.SourceTitle) == subject.EditionSlotId)
+                : _historyService.MostRecentForMovie(subject.Movie.Id);
 
             if (mostRecent != null && mostRecent.EventType == MovieHistoryEventType.Grabbed)
             {

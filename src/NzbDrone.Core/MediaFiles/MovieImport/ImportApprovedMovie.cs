@@ -11,6 +11,7 @@ using NzbDrone.Core.MediaFiles.Commands;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Qualities;
 
@@ -61,7 +62,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
             // I added a null op for the rare case that the quality is null. TODO: find out why that would even happen in the first place.
             var qualifiedImports = decisions
                 .Where(decision => decision.Approved)
-                .GroupBy(decision => decision.LocalMovie.Movie.Id)
+                .GroupBy(decision => (decision.LocalMovie.Movie.Id, GetEditionSlotId(decision.LocalMovie)))
                 .SelectMany(group => group
                     .OrderByDescending(decision => decision.LocalMovie.Quality ?? new QualityModel { Quality = Quality.Unknown }, new QualityModelComparer(group.First().LocalMovie.Movie.QualityProfile))
                     .ThenByDescending(decision => decision.LocalMovie.Size))
@@ -76,9 +77,17 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
 
                 try
                 {
-                    // check if already imported
-                    if (importResults.Select(r => r.ImportDecision.LocalMovie.Movie)
-                                         .Select(m => m.Id).Contains(localMovie.Movie.Id))
+                    // Never let a file for an untracked edition fall back into the standard edition's place
+                    // (manual imports skip the import specifications that would normally reject it).
+                    if (localMovie.EditionSlot is { Tracked: false })
+                    {
+                        importResults.Add(new ImportResult(importDecision, $"Edition '{localMovie.Edition}' is not tracked for this movie"));
+                        continue;
+                    }
+
+                    // check if already imported (one file per edition of a movie)
+                    if (importResults.Select(r => r.ImportDecision.LocalMovie)
+                                     .Any(m => m.Movie.Id == localMovie.Movie.Id && GetEditionSlotId(m) == GetEditionSlotId(localMovie)))
                     {
                         importResults.Add(new ImportResult(importDecision, "Movie has already been imported"));
                         continue;
@@ -142,10 +151,16 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
                         }
                     }
 
+                    var isStandardEdition = movieFile.MovieEditionId == EditionSlot.StandardEditionId;
+
                     movieFile = _mediaFileService.Add(movieFile);
                     importResults.Add(new ImportResult(importDecision));
 
-                    localMovie.Movie.MovieFile = movieFile;
+                    // Movie.MovieFile is the standard edition's file; other editions don't replace it.
+                    if (isStandardEdition)
+                    {
+                        localMovie.Movie.MovieFile = movieFile;
+                    }
 
                     if (newDownload)
                     {
@@ -207,6 +222,11 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
                                             .Select(d => new ImportResult(d, d.Rejections.Select(r => r.Message).ToArray())));
 
             return importResults;
+        }
+
+        private static int GetEditionSlotId(LocalMovie localMovie)
+        {
+            return localMovie.EditionSlot?.MovieEditionId ?? EditionSlot.StandardEditionId;
         }
     }
 }

@@ -199,12 +199,13 @@ namespace NzbDrone.Core.Download.Pending
                 queued.Add(GetQueueItem(pendingRelease, nextRssSync, pendingRelease.RemoteMovie.Movie));
             }
 
-            // Return best quality release for each movie
-            var deduped = queued.Where(q => q.Movie != null).GroupBy(q => q.Movie.Id).Select(g =>
+            // Return best quality release for each movie edition
+            var deduped = queued.Where(q => q.Movie != null).GroupBy(q => (q.Movie.Id, q.RemoteMovie?.EditionSlotId ?? 0)).Select(g =>
             {
-                var movies = g.First().Movie;
+                var first = g.First();
+                var profile = first.RemoteMovie?.QualityProfile ?? first.Movie.QualityProfile;
 
-                return g.OrderByDescending(e => e.Quality, new QualityModelComparer(movies.QualityProfile))
+                return g.OrderByDescending(e => e.Quality, new QualityModelComparer(profile))
                         .ThenBy(q => PrioritizeDownloadProtocol(q.Movie, q.Protocol))
                         .First();
             });
@@ -413,7 +414,7 @@ namespace NzbDrone.Core.Download.Pending
                 return;
             }
 
-            var profile = remoteMovie.Movie.QualityProfile;
+            var profile = remoteMovie.QualityProfile;
 
             foreach (var existingReport in existingReports)
             {

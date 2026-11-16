@@ -8,6 +8,7 @@ using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Movies.Editions;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Test.Framework;
 
 namespace NzbDrone.Core.Test.MovieTests.EditionTests
@@ -159,6 +160,55 @@ namespace NzbDrone.Core.Test.MovieTests.EditionTests
         public void should_reject_standard_edition_name()
         {
             Assert.Throws<NzbDroneClientException>(() => Subject.Add(new MovieEdition { MovieId = _movie.Id, Name = "Theatrical Cut" }));
+        }
+
+        [Test]
+        public void should_reject_unknown_quality_profile()
+        {
+            Assert.Throws<NzbDroneClientException>(() => Subject.Add(new MovieEdition { MovieId = _movie.Id, Name = "Extended", QualityProfileId = 99 }));
+        }
+
+        [Test]
+        public void should_use_edition_quality_profile_for_its_slot()
+        {
+            var movieProfile = new QualityProfile { Id = 1, Name = "Movie" };
+            var editionProfile = new QualityProfile { Id = 2, Name = "4K" };
+            _movie.QualityProfileId = 1;
+            _movie.QualityProfile = movieProfile;
+
+            Mocker.GetMock<IQualityProfileService>().Setup(s => s.Exists(2)).Returns(true);
+            Mocker.GetMock<IQualityProfileService>().Setup(s => s.Get(2)).Returns(editionProfile);
+
+            var edition = GivenEdition(1, "IMAX");
+            edition.QualityProfileId = 2;
+            GivenEdition(2, "Extended");
+
+            Subject.Resolve(_movie, "IMAX").QualityProfile.Should().Be(editionProfile);
+            Subject.Resolve(_movie, "Extended").QualityProfile.Should().Be(movieProfile);
+            Subject.Resolve(_movie, null).QualityProfile.Should().Be(movieProfile);
+        }
+
+        [Test]
+        public void should_fall_back_to_movie_profile_when_edition_profile_was_removed()
+        {
+            var movieProfile = new QualityProfile { Id = 1, Name = "Movie" };
+            _movie.QualityProfileId = 1;
+            _movie.QualityProfile = movieProfile;
+
+            var edition = GivenEdition(1, "IMAX");
+            edition.QualityProfileId = 2;
+
+            Subject.Resolve(_movie, "IMAX").QualityProfile.Should().Be(movieProfile);
+        }
+
+        [Test]
+        public void should_not_want_standard_slot_when_movie_only_wants_extra_editions()
+        {
+            _movie.StandardEditionMonitored = false;
+            GivenEdition(1, "Extended");
+
+            Subject.Resolve(_movie, null).Monitored.Should().BeFalse();
+            Subject.Resolve(_movie, "Extended").Monitored.Should().BeTrue();
         }
 
         [Test]

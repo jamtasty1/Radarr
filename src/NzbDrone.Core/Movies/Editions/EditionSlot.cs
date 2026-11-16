@@ -1,4 +1,5 @@
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.Profiles.Qualities;
 
 namespace NzbDrone.Core.Movies.Editions
 {
@@ -16,8 +17,14 @@ namespace NzbDrone.Core.Movies.Editions
         public bool Tracked { get; set; }
         public bool Monitored { get; set; }
 
+        // The edition's own monitored setting, regardless of whether the movie is monitored.
+        public bool EditionMonitored { get; set; }
+
         // The file currently filling this slot, if any.
         public MovieFile MovieFile { get; set; }
+
+        // The profile releases for this slot are judged by: the edition's own, else the movie's.
+        public QualityProfile QualityProfile { get; set; }
 
         public bool IsStandard => MovieEditionId == StandardEditionId;
 
@@ -28,8 +35,10 @@ namespace NzbDrone.Core.Movies.Editions
                 MovieEditionId = StandardEditionId,
                 Name = StandardEditionName,
                 Tracked = true,
-                Monitored = movie.Monitored,
-                MovieFile = movieFile
+                Monitored = movie.Monitored && movie.StandardEditionMonitored,
+                EditionMonitored = movie.StandardEditionMonitored,
+                MovieFile = movieFile,
+                QualityProfile = movie.QualityProfile
             };
         }
 

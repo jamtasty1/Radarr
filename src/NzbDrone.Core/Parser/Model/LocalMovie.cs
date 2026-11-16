@@ -8,6 +8,7 @@ using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Movies.Editions;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.Parser.Model
@@ -33,6 +34,9 @@ namespace NzbDrone.Core.Parser.Model
 
         // Which edition slot of the movie this file is (standard or a tracked edition).
         public EditionSlot EditionSlot { get; set; }
+
+        // The profile this release/file is judged by: its edition's own profile, else the movie's.
+        public QualityProfile QualityProfile => EditionSlot?.QualityProfile ?? Movie?.QualityProfile;
 
         // The file this one would replace: the one in the same edition slot.
         public MovieFile ExistingMovieFile => EditionSlot != null

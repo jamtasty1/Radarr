@@ -10,6 +10,7 @@ using NzbDrone.Core.Download.History;
 using NzbDrone.Core.History;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Movies.Events;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
@@ -32,7 +33,8 @@ namespace NzbDrone.Core.Download.TrackedDownloads
                                           IHandle<MovieAddedEvent>,
                                           IHandle<MovieEditedEvent>,
                                           IHandle<MoviesBulkEditedEvent>,
-                                          IHandle<MoviesDeletedEvent>
+                                          IHandle<MoviesDeletedEvent>,
+                                          IHandle<MovieEditionsChangedEvent>
     {
         private readonly IParsingService _parsingService;
         private readonly IHistoryService _historyService;
@@ -316,6 +318,20 @@ namespace NzbDrone.Core.Download.TrackedDownloads
                 .Where(t =>
                     t.RemoteMovie?.Movie != null &&
                     (t.RemoteMovie.Movie.Id == message.Movie?.Id || t.RemoteMovie.Movie.TmdbId == message.Movie?.TmdbId))
+                .ToList();
+
+            if (cachedItems.Any())
+            {
+                cachedItems.ForEach(UpdateCachedItem);
+
+                _eventAggregator.PublishEvent(new TrackedDownloadRefreshedEvent(GetTrackedDownloads()));
+            }
+        }
+
+        public void Handle(MovieEditionsChangedEvent message)
+        {
+            var cachedItems = _cache.Values
+                .Where(t => t.RemoteMovie?.Movie?.Id == message.MovieId)
                 .ToList();
 
             if (cachedItems.Any())

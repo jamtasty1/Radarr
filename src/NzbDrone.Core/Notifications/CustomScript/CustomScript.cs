@@ -79,6 +79,8 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Radarr_Release_Indexer", remoteMovie.Release.Indexer ?? string.Empty);
             environmentVariables.Add("Radarr_Release_Size", remoteMovie.Release.Size.ToString());
             environmentVariables.Add("Radarr_Release_ReleaseGroup", remoteMovie.ParsedMovieInfo.ReleaseGroup ?? string.Empty);
+            environmentVariables.Add("Radarr_Release_Edition", remoteMovie.ParsedMovieInfo.Edition ?? string.Empty);
+            environmentVariables.Add("Radarr_Release_EditionId", remoteMovie.EditionSlotId.ToString());
             environmentVariables.Add("Radarr_Release_Quality", quality.Quality.Name);
             environmentVariables.Add("Radarr_Release_QualityVersion", quality.Revision.Version.ToString());
             environmentVariables.Add("Radarr_IndexerFlags", remoteMovie.Release.IndexerFlags.ToString());
@@ -120,6 +122,8 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Radarr_MovieFile_Quality", movieFile.Quality.Quality.Name);
             environmentVariables.Add("Radarr_MovieFile_QualityVersion", movieFile.Quality.Revision.Version.ToString());
             environmentVariables.Add("Radarr_MovieFile_ReleaseGroup", movieFile.ReleaseGroup ?? string.Empty);
+            environmentVariables.Add("Radarr_MovieFile_Edition", movieFile.Edition ?? string.Empty);
+            environmentVariables.Add("Radarr_MovieFile_EditionId", movieFile.MovieEditionId.ToString());
             environmentVariables.Add("Radarr_MovieFile_SceneName", movieFile.SceneName ?? string.Empty);
             environmentVariables.Add("Radarr_MovieFile_SourcePath", sourcePath);
             environmentVariables.Add("Radarr_MovieFile_SourceFolder", Path.GetDirectoryName(sourcePath));
@@ -228,6 +232,8 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Radarr_MovieFile_Quality", movieFile.Quality.Quality.Name);
             environmentVariables.Add("Radarr_MovieFile_QualityVersion", movieFile.Quality.Revision.Version.ToString());
             environmentVariables.Add("Radarr_MovieFile_ReleaseGroup", movieFile.ReleaseGroup ?? string.Empty);
+            environmentVariables.Add("Radarr_MovieFile_Edition", movieFile.Edition ?? string.Empty);
+            environmentVariables.Add("Radarr_MovieFile_EditionId", movieFile.MovieEditionId.ToString());
             environmentVariables.Add("Radarr_MovieFile_SceneName", movieFile.SceneName ?? string.Empty);
 
             ExecuteScript(environmentVariables);

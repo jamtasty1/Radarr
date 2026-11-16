@@ -43,6 +43,8 @@ namespace NzbDrone.Core.MovieStats
             {
                 var file = filesResult.SingleOrDefault(f => f.MovieId == e.MovieId);
 
+                // Every edition's file counts, not just the standard one the movie points at.
+                e.MovieFileCount = file?.MovieFileCount ?? 0;
                 e.SizeOnDisk = file?.SizeOnDisk ?? 0;
                 e.ReleaseGroupsString = file?.ReleaseGroupsString;
                 e.MovieFileQualitiesString = file?.MovieFileQualitiesString;
@@ -74,6 +76,7 @@ namespace NzbDrone.Core.MovieStats
             {
                 return new SqlBuilder(_database.DatabaseType)
                     .Select(@"""MovieId"",
+                            COUNT(*) AS MovieFileCount,
                             SUM(COALESCE(""Size"", 0)) AS SizeOnDisk,
                             GROUP_CONCAT(""ReleaseGroup"", '|') AS ReleaseGroupsString,
                             GROUP_CONCAT(JSON_EXTRACT(""Quality"", '$.quality'), '|') AS MovieFileQualitiesString")
@@ -82,6 +85,7 @@ namespace NzbDrone.Core.MovieStats
 
             return new SqlBuilder(_database.DatabaseType)
                 .Select(@"""MovieId"",
+                        COUNT(*) AS MovieFileCount,
                         SUM(COALESCE(""Size"", 0)) AS SizeOnDisk,
                         string_agg(DISTINCT ""ReleaseGroup"", '|') AS ReleaseGroupsString,
                         string_agg(DISTINCT ""Quality""::json->>'quality', '|') AS MovieFileQualitiesString")

@@ -34,9 +34,9 @@ public class LocalMovieCustomFormatCalculationService : ILocalMovieCustomFormatC
         var fileNameUsedForCustomFormatCalculation = _fileNameBuilder.BuildFileName(localMovie.Movie, localMovie.ToMovieFile());
         localMovie.CustomFormats = _formatCalculator.ParseCustomFormat(localMovie, fileNameUsedForCustomFormatCalculation);
         localMovie.FileNameUsedForCustomFormatCalculation = fileNameUsedForCustomFormatCalculation;
-        localMovie.CustomFormatScore = localMovie.Movie.QualityProfile?.CalculateCustomFormatScore(localMovie.CustomFormats) ?? 0;
+        localMovie.CustomFormatScore = localMovie.QualityProfile?.CalculateCustomFormatScore(localMovie.CustomFormats) ?? 0;
 
         localMovie.OriginalFileNameCustomFormats = _formatCalculator.ParseCustomFormat(localMovie, Path.GetFileName(localMovie.Path));
-        localMovie.OriginalFileNameCustomFormatScore = localMovie.Movie.QualityProfile?.CalculateCustomFormatScore(localMovie.OriginalFileNameCustomFormats) ?? 0;
+        localMovie.OriginalFileNameCustomFormatScore = localMovie.QualityProfile?.CalculateCustomFormatScore(localMovie.OriginalFileNameCustomFormats) ?? 0;
     }
 }

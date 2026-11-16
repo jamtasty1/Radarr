@@ -20,6 +20,8 @@ interface MissingRowProps {
   title: string;
   year: number;
   titleSlug: string;
+  // Set when the movie has extra editions: which of them are still wanted.
+  wantedEditions?: string[];
   isSelected?: boolean;
   columns: Column[];
   onSelectedChange: (options: SelectStateInputProps) => void;
@@ -35,6 +37,7 @@ function MissingRow({
   title,
   year,
   titleSlug,
+  wantedEditions,
   isSelected,
   columns,
   onSelectedChange,
@@ -107,6 +110,14 @@ function MissingRow({
               date={lastSearchTime}
               includeSeconds={true}
             />
+          );
+        }
+
+        if (name === 'editions') {
+          return (
+            <TableRowCell key={name} className={styles.editions}>
+              {wantedEditions?.join(', ')}
+            </TableRowCell>
           );
         }
 

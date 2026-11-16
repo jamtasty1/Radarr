@@ -77,6 +77,39 @@ namespace NzbDrone.Core.Test.MovieStatsTests
         }
 
         [Test]
+        public void should_count_files_of_every_edition()
+        {
+            GivenMovieWithFile();
+            GivenMovieFile();
+
+            var editionFile = Builder<MovieFile>.CreateNew()
+                .With(e => e.Id = 0)
+                .With(e => e.MovieId = _movie.Id)
+                .With(e => e.MovieEditionId = 7)
+                .With(e => e.Quality = new QualityModel(Quality.Bluray1080p))
+                .With(e => e.Languages = new List<Language> { Language.English })
+                .BuildNew();
+            Db.Insert(editionFile);
+
+            var stats = Subject.MovieStatistics();
+
+            stats.Should().HaveCount(1);
+            stats.First().MovieFileCount.Should().Be(2);
+            stats.First().SizeOnDisk.Should().Be(_movieFile.Size + editionFile.Size);
+        }
+
+        [Test]
+        public void should_count_edition_file_without_standard_file()
+        {
+            _movieFile.MovieEditionId = 7;
+            GivenMovieFile();
+
+            var stats = Subject.MovieStatistics();
+
+            stats.First().MovieFileCount.Should().Be(1);
+        }
+
+        [Test]
         public void should_have_size_on_disk_when_movie_file_exists()
         {
             GivenMovieWithFile();

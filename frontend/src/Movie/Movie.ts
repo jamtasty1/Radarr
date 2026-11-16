@@ -64,6 +64,8 @@ interface Movie extends ModelBase {
   overview: string;
   youTubeTrailerId?: string;
   monitored: boolean;
+  // False when the movie only wants its extra editions.
+  standardEditionMonitored?: boolean;
   status: MovieStatus;
   title: string;
   titleSlug: string;

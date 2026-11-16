@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ using NzbDrone.Core.Datastore;
 using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Movies.Translations;
 using NzbDrone.Core.MovieStats;
 using NzbDrone.SignalR;
@@ -21,7 +23,10 @@ namespace Radarr.Api.V3.Wanted
     [V3ApiController("wanted/missing")]
     public class MissingController : MovieControllerWithSignalR
     {
-        public MissingController(IMovieService movieService,
+        private readonly IMovieEditionService _movieEditionService;
+
+        public MissingController(IMovieEditionService movieEditionService,
+                            IMovieService movieService,
                             IMovieTranslationService movieTranslationService,
                             IMovieStatisticsService movieStatisticsService,
                             IUpgradableSpecification upgradableSpecification,
@@ -31,6 +36,7 @@ namespace Radarr.Api.V3.Wanted
                             IBroadcastSignalRMessage signalRBroadcaster)
             : base(movieService, movieTranslationService, movieStatisticsService, upgradableSpecification, formatCalculator, configService, coverMapper, signalRBroadcaster)
         {
+            _movieEditionService = movieEditionService;
         }
 
         [NonAction]
@@ -59,9 +65,22 @@ namespace Radarr.Api.V3.Wanted
 
             pagingSpec.FilterExpressions.Add(v => v.Monitored == monitored);
 
-            var resource = pagingSpec.ApplyToPage(_movieService.MoviesWithoutFiles, v => MapToResource(v));
+            var resource = pagingSpec.ApplyToPage(_movieService.MoviesWithoutFiles, v => AddMissingEditions(MapToResource(v), v));
 
             return TypedResults.Ok(resource);
+        }
+
+        private MovieResource AddMissingEditions(MovieResource resource, Movie movie)
+        {
+            if (_movieEditionService.HasEditions(movie.Id))
+            {
+                resource.WantedEditions = _movieEditionService.GetSlots(movie)
+                    .Where(s => s.EditionMonitored && s.MovieFile == null)
+                    .Select(s => s.Name)
+                    .ToList();
+            }
+
+            return resource;
         }
     }
 }

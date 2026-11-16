@@ -21,6 +21,8 @@ interface CutoffUnmetRowProps {
   title: string;
   year: number;
   titleSlug: string;
+  // Set when the movie has extra editions: which of them are still wanted.
+  wantedEditions?: string[];
   isSelected?: boolean;
   columns: Column[];
   onSelectedChange: (options: SelectStateInputProps) => void;
@@ -36,11 +38,13 @@ function CutoffUnmetRow({
   title,
   year,
   titleSlug,
+  wantedEditions,
   isSelected,
   columns,
   onSelectedChange,
 }: CutoffUnmetRowProps) {
-  if (!movieFileId) {
+  // A movie can be here for an extra edition alone, with no standard file.
+  if (!movieFileId && !wantedEditions?.length) {
     return null;
   }
 
@@ -104,7 +108,9 @@ function CutoffUnmetRow({
         if (name === 'languages') {
           return (
             <TableRowCell key={name} className={styles.languages}>
-              <MovieFileLanguages movieFileId={movieFileId} />
+              {movieFileId ? (
+                <MovieFileLanguages movieFileId={movieFileId} />
+              ) : null}
             </TableRowCell>
           );
         }
@@ -116,6 +122,14 @@ function CutoffUnmetRow({
               date={lastSearchTime}
               includeSeconds={true}
             />
+          );
+        }
+
+        if (name === 'editions') {
+          return (
+            <TableRowCell key={name} className={styles.editions}>
+              {wantedEditions?.join(', ')}
+            </TableRowCell>
           );
         }
 

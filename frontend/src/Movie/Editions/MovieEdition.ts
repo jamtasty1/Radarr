@@ -9,6 +9,8 @@ export interface MovieEdition extends ModelBase {
   name: string;
   monitored: boolean;
   added: string;
+  // 0 = use the movie's quality profile.
+  qualityProfileId: number;
   movieFileId?: number;
   hasFile: boolean;
 }
@@ -18,4 +20,5 @@ export interface MovieEditionInput {
   movieId: number;
   name: string;
   monitored: boolean;
+  qualityProfileId: number;
 }

@@ -37,6 +37,11 @@ const columns: Column[] = [
     isVisible: true,
   },
   {
+    name: 'qualityProfile',
+    label: () => translate('QualityProfile'),
+    isVisible: true,
+  },
+  {
     name: 'actions',
     label: '',
     isVisible: true,
@@ -99,7 +104,11 @@ function MovieEditionsTable({ movieId }: MovieEditionsTableProps) {
               <MovieEditionRow
                 movieId={movieId}
                 isMovieMonitored={movie.monitored}
-                isMovieSaving={movie.isSaving}
+                isStandardEditionMonitored={
+                  movie.standardEditionMonitored ?? true
+                }
+                hasEditions={sortedEditions.length > 0}
+                movieQualityProfileId={movie.qualityProfileId}
                 movieFile={standardFile}
               />
 
@@ -108,6 +117,11 @@ function MovieEditionsTable({ movieId }: MovieEditionsTableProps) {
                   key={edition.id}
                   movieId={movieId}
                   isMovieMonitored={movie.monitored}
+                  isStandardEditionMonitored={
+                    movie.standardEditionMonitored ?? true
+                  }
+                  hasEditions={true}
+                  movieQualityProfileId={movie.qualityProfileId}
                   edition={edition}
                   movieFile={getFileForEdition(filesForMovie, edition.id)}
                 />

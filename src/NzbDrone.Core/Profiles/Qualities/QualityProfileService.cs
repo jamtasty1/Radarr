@@ -9,6 +9,7 @@ using NzbDrone.Core.Lifecycle;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Movies.Collections;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.Profiles.Qualities
@@ -35,6 +36,7 @@ namespace NzbDrone.Core.Profiles.Qualities
         private readonly IMovieService _movieService;
         private readonly IImportListFactory _importListFactory;
         private readonly IMovieCollectionService _collectionService;
+        private readonly IMovieEditionRepository _movieEditionRepository;
         private readonly Logger _logger;
 
         public QualityProfileService(IQualityProfileRepository profileRepository,
@@ -42,11 +44,13 @@ namespace NzbDrone.Core.Profiles.Qualities
                               IMovieService movieService,
                               IImportListFactory importListFactory,
                               IMovieCollectionService collectionService,
+                              IMovieEditionRepository movieEditionRepository,
                               Logger logger)
         {
             _profileRepository = profileRepository;
             _formatService = formatService;
             _movieService = movieService;
+            _movieEditionRepository = movieEditionRepository;
             _importListFactory = importListFactory;
             _collectionService = collectionService;
             _logger = logger;
@@ -64,7 +68,10 @@ namespace NzbDrone.Core.Profiles.Qualities
 
         public void Delete(int id)
         {
-            if (_movieService.GetAllMovies().Any(c => c.QualityProfileId == id) || _importListFactory.All().Any(c => c.QualityProfileId == id) || _collectionService.GetAllCollections().Any(c => c.QualityProfileId == id))
+            if (_movieService.GetAllMovies().Any(c => c.QualityProfileId == id) ||
+                _movieEditionRepository.All().Any(e => e.QualityProfileId == id) ||
+                _importListFactory.All().Any(c => c.QualityProfileId == id) ||
+                _collectionService.GetAllCollections().Any(c => c.QualityProfileId == id))
             {
                 throw new QualityProfileInUseException(id);
             }

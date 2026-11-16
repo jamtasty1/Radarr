@@ -46,7 +46,7 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
             }
 
             var cdhEnabled = _configService.EnableCompletedDownloadHandling;
-            var qualityProfile = subject.Movie.QualityProfile;
+            var qualityProfile = subject.QualityProfile;
 
             _logger.Debug("Performing history status check on report");
 
@@ -70,13 +70,13 @@ namespace NzbDrone.Core.DecisionEngine.Specifications.RssSync
                 var customFormats = _formatService.ParseCustomFormat(mostRecent, subject.Movie);
 
                 var cutoffUnmet = _upgradableSpecification.CutoffNotMet(
-                    subject.Movie.QualityProfile,
+                    subject.QualityProfile,
                     mostRecent.Quality,
                     customFormats,
                     subject.ParsedMovieInfo.Quality);
 
                 var upgradeableRejectReason = _upgradableSpecification.IsUpgradable(
-                    subject.Movie.QualityProfile,
+                    subject.QualityProfile,
                     mostRecent.Quality,
                     customFormats,
                     subject.ParsedMovieInfo.Quality,

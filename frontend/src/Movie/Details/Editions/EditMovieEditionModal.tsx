@@ -1,4 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSelector } from 'react-redux';
+import AppState from 'App/State/AppState';
 import Alert from 'Components/Alert';
 import Form from 'Components/Form/Form';
 import FormGroup from 'Components/Form/FormGroup';
@@ -31,6 +33,29 @@ function EditMovieEditionModalContent({
 }: EditMovieEditionModalContentProps) {
   const [name, setName] = useState(edition?.name ?? '');
   const [monitored, setMonitored] = useState(edition?.monitored ?? true);
+  const [qualityProfileId, setQualityProfileId] = useState(
+    edition?.qualityProfileId ?? 0
+  );
+
+  const qualityProfiles = useSelector(
+    (state: AppState) => state.settings.qualityProfiles.items
+  );
+
+  // 0 keeps the movie's own profile.
+  const profileOptions = useMemo(
+    () => [
+      { key: 0, value: translate('EditionUseMovieProfile') },
+      ...qualityProfiles.map(({ id, name }) => ({ key: id, value: name })),
+    ],
+    [qualityProfiles]
+  );
+
+  const handleProfileChange = useCallback(
+    ({ value }: InputChanged<string | number>) => {
+      setQualityProfileId(Number(value));
+    },
+    []
+  );
 
   const { mutate, isPending, error, reset } = useSaveMovieEdition(movieId);
 
@@ -51,10 +76,24 @@ function EditMovieEditionModalContent({
 
   const handleSavePress = useCallback(() => {
     mutate(
-      { id: edition?.id, movieId, name: name.trim(), monitored },
+      {
+        id: edition?.id,
+        movieId,
+        name: name.trim(),
+        monitored,
+        qualityProfileId,
+      },
       { onSuccess: onModalClose }
     );
-  }, [edition, movieId, name, monitored, mutate, onModalClose]);
+  }, [
+    edition,
+    movieId,
+    name,
+    monitored,
+    qualityProfileId,
+    mutate,
+    onModalClose,
+  ]);
 
   return (
     <ModalContent onModalClose={onModalClose}>
@@ -91,6 +130,18 @@ function EditMovieEditionModalContent({
               value={monitored}
               helpText={translate('EditionMonitoredHelpText')}
               onChange={handleMonitoredChange}
+            />
+          </FormGroup>
+          <FormGroup>
+            <FormLabel>{translate('QualityProfile')}</FormLabel>
+
+            <FormInputGroup
+              type={inputTypes.SELECT}
+              name="qualityProfileId"
+              value={qualityProfileId}
+              values={profileOptions}
+              helpText={translate('EditionQualityProfileHelpText')}
+              onChange={handleProfileChange}
             />
           </FormGroup>
         </Form>

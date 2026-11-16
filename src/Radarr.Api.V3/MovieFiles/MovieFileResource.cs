@@ -5,6 +5,7 @@ using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles;
+using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
 using Radarr.Api.V3.CustomFormats;
 using Radarr.Http.REST;
@@ -66,12 +67,15 @@ namespace Radarr.Api.V3.MovieFiles
             };
         }
 
-        public static MovieFileResource ToResource(this MovieFile model, NzbDrone.Core.Movies.Movie movie, IUpgradableSpecification upgradableSpecification, ICustomFormatCalculationService formatCalculationService)
+        // qualityProfile: the profile of the file's edition when it isn't the movie's.
+        public static MovieFileResource ToResource(this MovieFile model, NzbDrone.Core.Movies.Movie movie, IUpgradableSpecification upgradableSpecification, ICustomFormatCalculationService formatCalculationService, QualityProfile qualityProfile = null)
         {
             if (model == null)
             {
                 return null;
             }
+
+            qualityProfile ??= movie.QualityProfile;
 
             var resource = new MovieFileResource
             {
@@ -89,7 +93,7 @@ namespace Radarr.Api.V3.MovieFiles
                 MovieEditionId = model.MovieEditionId,
                 ReleaseGroup = model.ReleaseGroup,
                 MediaInfo = model.MediaInfo.ToResource(model.SceneName),
-                QualityCutoffNotMet = upgradableSpecification?.QualityCutoffNotMet(movie.QualityProfile, model.Quality) ?? false,
+                QualityCutoffNotMet = upgradableSpecification?.QualityCutoffNotMet(qualityProfile, model.Quality) ?? false,
                 OriginalFilePath = model.OriginalFilePath,
                 IndexerFlags = (int)model.IndexerFlags
             };
@@ -98,7 +102,7 @@ namespace Radarr.Api.V3.MovieFiles
             {
                 model.Movie = movie;
                 var customFormats = formatCalculationService?.ParseCustomFormat(model, model.Movie);
-                var customFormatScore = movie?.QualityProfile?.CalculateCustomFormatScore(customFormats) ?? 0;
+                var customFormatScore = qualityProfile?.CalculateCustomFormatScore(customFormats) ?? 0;
 
                 resource.CustomFormats = customFormats.ToResource(false);
                 resource.CustomFormatScore = customFormatScore;

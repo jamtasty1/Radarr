@@ -9,6 +9,7 @@ using NzbDrone.Core.Exceptions;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies.Events;
+using NzbDrone.Core.Profiles.Qualities;
 
 namespace NzbDrone.Core.Movies.Editions
 {
@@ -26,6 +27,12 @@ namespace NzbDrone.Core.Movies.Editions
         EditionSlot ResolveForTitle(Movie movie, string releaseTitle);
         EditionSlot GetSlot(Movie movie, int movieEditionId);
 
+        // The standard edition followed by each tracked edition, with their files and profiles.
+        List<EditionSlot> GetSlots(Movie movie);
+
+        // The profile files in an edition are judged by (the edition's own, else the movie's).
+        QualityProfile GetQualityProfile(Movie movie, int movieEditionId);
+
         // Slot id only (no file lookup): 0 = standard, -1 = an edition the movie doesn't track.
         int ResolveSlotIdForTitle(Movie movie, string releaseTitle);
 
@@ -40,18 +47,24 @@ namespace NzbDrone.Core.Movies.Editions
         private readonly IMovieEditionRepository _repository;
         private readonly IMediaFileService _mediaFileService;
         private readonly IMovieService _movieService;
+        private readonly IQualityProfileService _qualityProfileService;
+        private readonly IEventAggregator _eventAggregator;
         private readonly ICached<Dictionary<int, List<MovieEdition>>> _cache;
         private readonly Logger _logger;
 
         public MovieEditionService(IMovieEditionRepository repository,
                                    IMediaFileService mediaFileService,
                                    IMovieService movieService,
+                                   IQualityProfileService qualityProfileService,
+                                   IEventAggregator eventAggregator,
                                    ICacheManager cacheManager,
                                    Logger logger)
         {
             _repository = repository;
             _mediaFileService = mediaFileService;
             _movieService = movieService;
+            _qualityProfileService = qualityProfileService;
+            _eventAggregator = eventAggregator;
             _cache = cacheManager.GetCache<Dictionary<int, List<MovieEdition>>>(GetType());
             _logger = logger;
         }
@@ -90,6 +103,8 @@ namespace NzbDrone.Core.Movies.Editions
 
             AdoptMatchingStandardFiles(movie, edition);
 
+            _eventAggregator.PublishEvent(new MovieEditionsChangedEvent(edition.MovieId));
+
             return edition;
         }
 
@@ -104,6 +119,8 @@ namespace NzbDrone.Core.Movies.Editions
 
             edition = _repository.Update(edition);
             _cache.Clear();
+
+            _eventAggregator.PublishEvent(new MovieEditionsChangedEvent(edition.MovieId));
 
             return edition;
         }
@@ -125,6 +142,8 @@ namespace NzbDrone.Core.Movies.Editions
             _cache.Clear();
 
             _logger.Info("Removed edition '{0}' from movie {1}", edition.Name, edition.MovieId);
+
+            _eventAggregator.PublishEvent(new MovieEditionsChangedEvent(edition.MovieId));
         }
 
         public EditionSlot Resolve(Movie movie, string edition)
@@ -133,7 +152,7 @@ namespace NzbDrone.Core.Movies.Editions
 
             if (editions.Empty() || EditionNormalizer.IsStandard(edition))
             {
-                return EditionSlot.Standard(movie, GetStandardFile(movie));
+                return BuildStandardSlot(movie);
             }
 
             var match = EditionNormalizer.FindMatch(editions, edition);
@@ -176,7 +195,7 @@ namespace NzbDrone.Core.Movies.Editions
         {
             if (movieEditionId == EditionSlot.StandardEditionId)
             {
-                return EditionSlot.Standard(movie, GetStandardFile(movie));
+                return BuildStandardSlot(movie);
             }
 
             var edition = GetByMovieId(movie.Id).FirstOrDefault(e => e.Id == movieEditionId);
@@ -187,6 +206,24 @@ namespace NzbDrone.Core.Movies.Editions
             }
 
             return BuildSlot(movie, edition);
+        }
+
+        public List<EditionSlot> GetSlots(Movie movie)
+        {
+            var slots = new List<EditionSlot> { BuildStandardSlot(movie) };
+
+            slots.AddRange(GetByMovieId(movie.Id).Select(e => BuildSlot(movie, e)));
+
+            return slots;
+        }
+
+        public QualityProfile GetQualityProfile(Movie movie, int movieEditionId)
+        {
+            var edition = movieEditionId == EditionSlot.StandardEditionId
+                ? null
+                : GetByMovieId(movie.Id).FirstOrDefault(e => e.Id == movieEditionId);
+
+            return edition == null ? GetMovieQualityProfile(movie) : GetQualityProfile(movie, edition);
         }
 
         public MovieFile AssignFile(MovieFile movieFile, int movieEditionId)
@@ -261,6 +298,11 @@ namespace NzbDrone.Core.Movies.Editions
                     edition.Name);
             }
 
+            if (edition.QualityProfileId < 0 || (edition.QualityProfileId > 0 && !_qualityProfileService.Exists(edition.QualityProfileId)))
+            {
+                throw new NzbDroneClientException(HttpStatusCode.BadRequest, "Quality profile {0} does not exist", edition.QualityProfileId);
+            }
+
             var duplicate = GetByMovieId(edition.MovieId)
                 .FirstOrDefault(e => e.Id != edition.Id && e.Key == edition.Key);
 
@@ -285,8 +327,40 @@ namespace NzbDrone.Core.Movies.Editions
                 Name = edition.Name,
                 Tracked = true,
                 Monitored = movie.Monitored && edition.Monitored,
-                MovieFile = file
+                EditionMonitored = edition.Monitored,
+                MovieFile = file,
+                QualityProfile = GetQualityProfile(movie, edition)
             };
+        }
+
+        private EditionSlot BuildStandardSlot(Movie movie)
+        {
+            var slot = EditionSlot.Standard(movie, GetStandardFile(movie));
+            slot.QualityProfile = GetMovieQualityProfile(movie);
+
+            return slot;
+        }
+
+        // An edition uses its own profile when it has one, otherwise the movie's. A profile that
+        // has since been removed falls back to the movie's too.
+        private QualityProfile GetQualityProfile(Movie movie, MovieEdition edition)
+        {
+            if (edition.QualityProfileId > 0 && edition.QualityProfileId != movie.QualityProfileId && _qualityProfileService.Exists(edition.QualityProfileId))
+            {
+                return _qualityProfileService.Get(edition.QualityProfileId);
+            }
+
+            return GetMovieQualityProfile(movie);
+        }
+
+        private QualityProfile GetMovieQualityProfile(Movie movie)
+        {
+            if (movie.QualityProfile != null || movie.QualityProfileId == 0)
+            {
+                return movie.QualityProfile;
+            }
+
+            return _qualityProfileService.Exists(movie.QualityProfileId) ? _qualityProfileService.Get(movie.QualityProfileId) : null;
         }
 
         // Movie.MovieFileId always points at the standard edition's file.

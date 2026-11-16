@@ -12,11 +12,12 @@ import { MovieEdition } from 'Movie/Editions/MovieEdition';
 import {
   useDeleteMovieEdition,
   useSaveMovieEdition,
+  useSetStandardEditionMonitored,
 } from 'Movie/Editions/useMovieEditions';
 import MovieQuality from 'Movie/MovieQuality';
 import { MovieFile } from 'MovieFile/MovieFile';
+import QualityProfileName from 'Settings/Profiles/Quality/QualityProfileName';
 import { showMessage } from 'Store/Actions/appActions';
-import { toggleMovieMonitored } from 'Store/Actions/movieActions';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
 import EditMovieEditionModal from './EditMovieEditionModal';
@@ -25,7 +26,9 @@ import styles from './MovieEditionsTable.css';
 interface MovieEditionRowProps {
   movieId: number;
   isMovieMonitored: boolean;
-  isMovieSaving?: boolean;
+  isStandardEditionMonitored: boolean;
+  hasEditions: boolean;
+  movieQualityProfileId: number;
   // Undefined for the standard edition, which is the movie itself.
   edition?: MovieEdition;
   movieFile?: MovieFile;
@@ -34,13 +37,16 @@ interface MovieEditionRowProps {
 function MovieEditionRow({
   movieId,
   isMovieMonitored,
-  isMovieSaving = false,
+  isStandardEditionMonitored,
+  hasEditions,
+  movieQualityProfileId,
   edition,
   movieFile,
 }: MovieEditionRowProps) {
   const dispatch = useDispatch();
   const isStandard = !edition;
-  const monitored = isStandard ? isMovieMonitored : edition.monitored;
+  const monitored = isStandard ? isStandardEditionMonitored : edition.monitored;
+  const qualityProfileId = edition?.qualityProfileId || movieQualityProfileId;
   const isWanted = isMovieMonitored && monitored;
 
   const [isEditModalOpen, setEditModalOpen, setEditModalClosed] =
@@ -50,6 +56,8 @@ function MovieEditionRow({
 
   const { mutate: saveEdition, isPending: isSaving } =
     useSaveMovieEdition(movieId);
+  const { mutate: setStandardMonitored, isPending: isStandardSaving } =
+    useSetStandardEditionMonitored(movieId);
   const { mutate: deleteEdition, isPending: isDeleting } =
     useDeleteMovieEdition(movieId);
 
@@ -71,7 +79,7 @@ function MovieEditionRow({
   const handleMonitorPress = useCallback(
     (value: boolean) => {
       if (isStandard) {
-        dispatch(toggleMovieMonitored({ movieId, monitored: value }));
+        setStandardMonitored(value);
         return;
       }
 
@@ -83,7 +91,7 @@ function MovieEditionRow({
         }
       );
     },
-    [isStandard, edition, movieId, dispatch, saveEdition, showError]
+    [isStandard, edition, saveEdition, setStandardMonitored, showError]
   );
 
   const handleDeleteConfirm = useCallback(() => {
@@ -105,8 +113,11 @@ function MovieEditionRow({
       <TableRowCell className={styles.monitored}>
         <MonitorToggleButton
           monitored={monitored}
-          isDisabled={!isStandard && !isMovieMonitored}
-          isSaving={isStandard ? isMovieSaving : isSaving}
+          // Turning off the only edition would want nothing; unmonitor the movie for that.
+          isDisabled={
+            !isMovieMonitored || (isStandard && !hasEditions && monitored)
+          }
+          isSaving={isStandard ? isStandardSaving : isSaving}
           onPress={handleMonitorPress}
         />
       </TableRowCell>
@@ -138,6 +149,10 @@ function MovieEditionRow({
             {isWanted ? translate('Missing') : translate('Unmonitored')}
           </Label>
         )}
+      </TableRowCell>
+
+      <TableRowCell className={styles.profile}>
+        <QualityProfileName qualityProfileId={qualityProfileId} />
       </TableRowCell>
 
       <TableRowCell className={styles.actions}>

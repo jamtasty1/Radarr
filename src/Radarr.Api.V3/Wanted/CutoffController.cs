@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
@@ -9,6 +10,7 @@ using NzbDrone.Core.Datastore;
 using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Movies.Translations;
 using NzbDrone.Core.MovieStats;
 using NzbDrone.SignalR;
@@ -22,8 +24,11 @@ namespace Radarr.Api.V3.Wanted
     public class CutoffController : MovieControllerWithSignalR
     {
         private readonly IMovieCutoffService _movieCutoffService;
+        private readonly IMovieEditionService _movieEditionService;
+        private readonly IUpgradableSpecification _cutoffSpecification;
 
         public CutoffController(IMovieCutoffService movieCutoffService,
+                            IMovieEditionService movieEditionService,
                             IMovieService movieService,
                             IMovieTranslationService movieTranslationService,
                             IMovieStatisticsService movieStatisticsService,
@@ -35,6 +40,8 @@ namespace Radarr.Api.V3.Wanted
             : base(movieService, movieTranslationService, movieStatisticsService, upgradableSpecification, formatCalculator, configService, coverMapper, signalRBroadcaster)
         {
             _movieCutoffService = movieCutoffService;
+            _movieEditionService = movieEditionService;
+            _cutoffSpecification = upgradableSpecification;
         }
 
         [NonAction]
@@ -63,9 +70,25 @@ namespace Radarr.Api.V3.Wanted
 
             pagingSpec.FilterExpressions.Add(v => v.Monitored == monitored);
 
-            var resource = pagingSpec.ApplyToPage(_movieCutoffService.MoviesWhereCutoffUnmet, v => MapToResource(v));
+            var resource = pagingSpec.ApplyToPage(_movieCutoffService.MoviesWhereCutoffUnmet, v => AddCutoffUnmetEditions(MapToResource(v), v));
 
             return TypedResults.Ok(resource);
+        }
+
+        // Matches the cutoff query, which compares quality only. Each entry names the edition and
+        // its file's quality, since the row's own quality column shows the standard file.
+        private MovieResource AddCutoffUnmetEditions(MovieResource resource, Movie movie)
+        {
+            if (_movieEditionService.HasEditions(movie.Id))
+            {
+                resource.WantedEditions = _movieEditionService.GetSlots(movie)
+                    .Where(s => s.EditionMonitored && s.MovieFile != null && s.QualityProfile != null)
+                    .Where(s => _cutoffSpecification.QualityCutoffNotMet(s.QualityProfile, s.MovieFile.Quality))
+                    .Select(s => $"{s.Name} ({s.MovieFile.Quality.Quality.Name})")
+                    .ToList();
+            }
+
+            return resource;
         }
     }
 }

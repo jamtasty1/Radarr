@@ -62,6 +62,13 @@ namespace Radarr.Api.V3.Movies
 
         // Editing Only
         public bool Monitored { get; set; }
+
+        // Null (from clients that don't know about editions) keeps the current setting; new movies default to wanting it.
+        public bool? StandardEditionMonitored { get; set; }
+
+        // Wanted pages only, when the movie has extra editions: the editions that are missing, or for
+        // Cutoff Unmet the editions below cutoff with their file's quality, e.g. "Extended (Bluray-1080p)".
+        public List<string> WantedEditions { get; set; }
         public MovieStatusType MinimumAvailability { get; set; }
         public bool IsAvailable { get; set; }
         public string FolderName { get; set; }
@@ -140,6 +147,7 @@ namespace Radarr.Api.V3.Movies
                 QualityProfileId = model.QualityProfileId,
 
                 Monitored = model.Monitored,
+                StandardEditionMonitored = model.StandardEditionMonitored,
                 MinimumAvailability = model.MinimumAvailability,
 
                 IsAvailable = model.IsAvailable(availDelay),
@@ -206,6 +214,7 @@ namespace Radarr.Api.V3.Movies
                 QualityProfileId = resource.QualityProfileId,
 
                 Monitored = resource.Monitored,
+                StandardEditionMonitored = resource.StandardEditionMonitored ?? true,
                 MinimumAvailability = resource.MinimumAvailability,
 
                 RootFolderPath = resource.RootFolderPath,
@@ -219,6 +228,11 @@ namespace Radarr.Api.V3.Movies
         public static Movie ToModel(this MovieResource resource, Movie movie)
         {
             var updatedMovie = resource.ToModel();
+
+            if (!resource.StandardEditionMonitored.HasValue)
+            {
+                updatedMovie.StandardEditionMonitored = movie.StandardEditionMonitored;
+            }
 
             movie.ApplyChanges(updatedMovie);
 

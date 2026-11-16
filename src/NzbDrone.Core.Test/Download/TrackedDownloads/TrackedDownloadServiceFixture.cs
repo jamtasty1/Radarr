@@ -4,6 +4,7 @@ using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using NzbDrone.Core.Download;
+using NzbDrone.Core.Download.Aggregation;
 using NzbDrone.Core.Download.History;
 using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.History;
@@ -11,6 +12,7 @@ using NzbDrone.Core.Indexers;
 using NzbDrone.Core.Indexers.TorrentRss;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Movies.Events;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Parser.Model;
@@ -235,6 +237,50 @@ namespace NzbDrone.Core.Test.Download.TrackedDownloads
             var trackedDownloads = Subject.GetTrackedDownloads();
             trackedDownloads.Should().HaveCount(1);
             trackedDownloads.First().RemoteMovie.Should().BeNull();
+        }
+
+        [Test]
+        public void should_rematch_tracked_download_when_movie_editions_change()
+        {
+            var remoteMovie = new RemoteMovie
+            {
+                Movie = new Movie() { Id = 3 },
+                ParsedMovieInfo = new ParsedMovieInfo()
+                {
+                    MovieTitles = { "A Movie" },
+                    Year = 1998,
+                    Edition = "Extended"
+                }
+            };
+
+            Mocker.GetMock<IParsingService>()
+                  .Setup(s => s.Map(It.IsAny<ParsedMovieInfo>(), It.IsAny<string>(), It.IsAny<int>(), null))
+                  .Returns(remoteMovie);
+
+            Mocker.GetMock<IHistoryService>()
+                  .Setup(s => s.FindByDownloadId(It.IsAny<string>()))
+                  .Returns(new List<MovieHistory>());
+
+            var client = new DownloadClientDefinition { Id = 1, Protocol = DownloadProtocol.Torrent };
+
+            var item = new DownloadClientItem
+            {
+                Title = "A Movie 1998 Extended",
+                DownloadId = "12345",
+                DownloadClientInfo = new DownloadClientItemClientInfo { Id = 1, Type = "Blackhole", Name = "Blackhole Client", Protocol = DownloadProtocol.Torrent }
+            };
+
+            Subject.TrackDownload(client, item);
+
+            Subject.Handle(new MovieEditionsChangedEvent(3));
+            Subject.Handle(new MovieEditionsChangedEvent(99));
+
+            // Once when tracked, once more for the change to movie 3; movie 99 has no downloads.
+            Mocker.GetMock<IRemoteMovieAggregationService>()
+                  .Verify(v => v.Augment(It.IsAny<RemoteMovie>()), Times.Exactly(2));
+
+            Mocker.GetMock<NzbDrone.Core.Messaging.Events.IEventAggregator>()
+                  .Verify(v => v.PublishEvent(It.IsAny<TrackedDownloadRefreshedEvent>()), Times.Once());
         }
 
         [Test]

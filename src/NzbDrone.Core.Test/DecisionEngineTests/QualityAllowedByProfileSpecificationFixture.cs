@@ -3,6 +3,7 @@ using FluentAssertions;
 using NUnit.Framework;
 using NzbDrone.Core.DecisionEngine.Specifications;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
@@ -62,6 +63,27 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
             _remoteMovie.Movie.QualityProfile.Items = Qualities.QualityFixture.GetDefaultQualities(Quality.DVD, Quality.HDTV720p, Quality.Bluray1080p);
 
             Subject.IsSatisfiedBy(_remoteMovie, new()).Accepted.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_use_edition_quality_profile_when_edition_has_one()
+        {
+            _remoteMovie.ParsedMovieInfo.Quality.Quality = Quality.Bluray2160p;
+            _remoteMovie.Movie.QualityProfile.Items = Qualities.QualityFixture.GetDefaultQualities(Quality.Bluray1080p);
+            _remoteMovie.EditionSlot = new EditionSlot
+            {
+                MovieEditionId = 5,
+                Name = "IMAX",
+                Tracked = true,
+                Monitored = true,
+                QualityProfile = new QualityProfile
+                {
+                    Cutoff = Quality.Bluray2160p.Id,
+                    Items = Qualities.QualityFixture.GetDefaultQualities(Quality.Bluray2160p)
+                }
+            };
+
+            Subject.IsSatisfiedBy(_remoteMovie, new()).Accepted.Should().BeTrue();
         }
     }
 }

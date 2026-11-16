@@ -3,3 +3,9 @@
 
   width: 100px;
 }
+
+.editions {
+  composes: cell from '~Components/Table/Cells/TableRowCell.css';
+
+  white-space: nowrap;
+}

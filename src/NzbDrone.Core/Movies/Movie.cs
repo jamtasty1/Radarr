@@ -14,11 +14,16 @@ namespace NzbDrone.Core.Movies
         {
             Tags = new HashSet<int>();
             MovieMetadata = new MovieMetadata();
+            StandardEditionMonitored = true;
         }
 
         public int MovieMetadataId { get; set; }
 
         public bool Monitored { get; set; }
+
+        // Whether the standard (untagged/theatrical) edition is wanted. Turning it off while
+        // the movie stays monitored means only the movie's extra editions are wanted.
+        public bool StandardEditionMonitored { get; set; }
         public MovieStatusType MinimumAvailability { get; set; }
         public int QualityProfileId { get; set; }
 
@@ -153,6 +158,7 @@ namespace NzbDrone.Core.Movies
             QualityProfileId = otherMovie.QualityProfileId;
 
             Monitored = otherMovie.Monitored;
+            StandardEditionMonitored = otherMovie.StandardEditionMonitored;
             MinimumAvailability = otherMovie.MinimumAvailability;
 
             RootFolderPath = otherMovie.RootFolderPath;

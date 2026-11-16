@@ -65,6 +65,11 @@ export const defaultState = {
         isVisible: false
       },
       {
+        name: 'editions',
+        label: () => translate('Editions'),
+        isVisible: true
+      },
+      {
         name: 'status',
         label: () => translate('Status'),
         isVisible: true
@@ -154,6 +159,11 @@ export const defaultState = {
         label: () => translate('LastSearched'),
         isSortable: true,
         isVisible: false
+      },
+      {
+        name: 'editions',
+        label: () => translate('Editions'),
+        isVisible: true
       },
       {
         name: 'status',

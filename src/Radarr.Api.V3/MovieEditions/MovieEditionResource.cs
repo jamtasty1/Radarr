@@ -12,6 +12,9 @@ namespace Radarr.Api.V3.MovieEditions
         public bool Monitored { get; set; }
         public DateTime Added { get; set; }
 
+        // 0 = use the movie's quality profile.
+        public int QualityProfileId { get; set; }
+
         // Read-only: the file currently filling this edition.
         public int? MovieFileId { get; set; }
         public bool HasFile { get; set; }
@@ -33,6 +36,7 @@ namespace Radarr.Api.V3.MovieEditions
                 Name = model.Name,
                 Monitored = model.Monitored,
                 Added = model.Added,
+                QualityProfileId = model.QualityProfileId,
                 MovieFileId = movieFile?.Id,
                 HasFile = movieFile != null
             };
@@ -50,7 +54,8 @@ namespace Radarr.Api.V3.MovieEditions
                 Id = resource.Id,
                 MovieId = resource.MovieId,
                 Name = resource.Name,
-                Monitored = resource.Monitored
+                Monitored = resource.Monitored,
+                QualityProfileId = resource.QualityProfileId
             };
         }
     }

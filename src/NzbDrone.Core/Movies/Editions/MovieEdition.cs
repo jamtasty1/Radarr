@@ -12,6 +12,9 @@ namespace NzbDrone.Core.Movies.Editions
         public bool Monitored { get; set; }
         public DateTime Added { get; set; }
 
+        // 0 = use the movie's quality profile.
+        public int QualityProfileId { get; set; }
+
         public string Key => EditionNormalizer.Normalize(Name);
 
         public override string ToString()

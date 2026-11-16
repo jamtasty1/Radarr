@@ -69,3 +69,9 @@
 
   margin-left: auto;
 }
+
+.profile {
+  composes: cell from '~Components/Table/Cells/TableRowCell.css';
+
+  white-space: nowrap;
+}

@@ -249,8 +249,10 @@ namespace NzbDrone.Core.Movies
             return Query(builder);
         }
 
+        // A movie is missing when a wanted edition has no file: the standard edition (unless the
+        // movie only wants its extra editions) or any monitored extra edition.
         public SqlBuilder MoviesWithoutFilesBuilder() => Builder()
-            .Where<Movie>(x => x.MovieFileId == 0)
+            .Where(BuildMissingWhereClause())
             .Where<Movie>(m => m.MovieMetadata.Value.Year > 0)
             .GroupBy<Movie>(m => m.Id)
             .GroupBy<MovieMetadata>(m => m.Id);
@@ -263,9 +265,11 @@ namespace NzbDrone.Core.Movies
             return pagingSpec;
         }
 
+        // Cutoff is unmet when a wanted edition's file is below its profile's cutoff: the standard
+        // file against the movie's profile, or a monitored extra edition's file against the
+        // edition's own profile (falling back to the movie's).
         public SqlBuilder MoviesWhereCutoffUnmetBuilder(List<QualitiesBelowCutoff> qualitiesBelowCutoff) => Builder()
-            .Where<Movie>(x => x.MovieFileId != 0)
-            .Where(BuildQualityCutoffWhereClause(qualitiesBelowCutoff))
+            .Where(BuildCutoffUnmetWhereClause(qualitiesBelowCutoff))
             .GroupBy<Movie>(m => m.Id)
             .GroupBy<MovieMetadata>(m => m.Id);
 
@@ -277,7 +281,36 @@ namespace NzbDrone.Core.Movies
             return pagingSpec;
         }
 
-        private string BuildQualityCutoffWhereClause(List<QualitiesBelowCutoff> qualitiesBelowCutoff)
+        private string True => _database.DatabaseType == DatabaseType.PostgreSQL ? "true" : "1";
+
+        private string BuildMissingWhereClause()
+        {
+            var standardMissing = $"(\"{_table}\".\"MovieFileId\" = 0 AND \"{_table}\".\"StandardEditionMonitored\" = {True})";
+
+            var editionMissing = "EXISTS (SELECT 1 FROM \"MovieEditions\" AS \"me\"" +
+                $" WHERE \"me\".\"MovieId\" = \"{_table}\".\"Id\" AND \"me\".\"Monitored\" = {True}" +
+                " AND NOT EXISTS (SELECT 1 FROM \"MovieFiles\" AS \"ef\"" +
+                " WHERE \"ef\".\"MovieId\" = \"me\".\"MovieId\" AND \"ef\".\"MovieEditionId\" = \"me\".\"Id\"))";
+
+            return $"({standardMissing} OR {editionMissing})";
+        }
+
+        private string BuildCutoffUnmetWhereClause(List<QualitiesBelowCutoff> qualitiesBelowCutoff)
+        {
+            var standardUnmet = $"(\"{_table}\".\"MovieFileId\" <> 0 AND \"{_table}\".\"StandardEditionMonitored\" = {True}" +
+                $" AND {BuildQualityCutoffWhereClause(qualitiesBelowCutoff, $"\"{_table}\".\"QualityProfileId\"", "\"MovieFiles\"")})";
+
+            var editionProfileId = $"(CASE WHEN \"me\".\"QualityProfileId\" <> 0 THEN \"me\".\"QualityProfileId\" ELSE \"{_table}\".\"QualityProfileId\" END)";
+
+            var editionUnmet = "EXISTS (SELECT 1 FROM \"MovieFiles\" AS \"ef\"" +
+                " JOIN \"MovieEditions\" AS \"me\" ON \"me\".\"Id\" = \"ef\".\"MovieEditionId\" AND \"me\".\"MovieId\" = \"ef\".\"MovieId\"" +
+                $" WHERE \"ef\".\"MovieId\" = \"{_table}\".\"Id\" AND \"me\".\"Monitored\" = {True}" +
+                $" AND {BuildQualityCutoffWhereClause(qualitiesBelowCutoff, editionProfileId, "\"ef\"")})";
+
+            return $"({standardUnmet} OR {editionUnmet})";
+        }
+
+        private static string BuildQualityCutoffWhereClause(List<QualitiesBelowCutoff> qualitiesBelowCutoff, string profileIdColumn, string fileTable)
         {
             var clauses = new List<string>();
 
@@ -285,7 +318,7 @@ namespace NzbDrone.Core.Movies
             {
                 foreach (var belowCutoff in profile.QualityIds)
                 {
-                    clauses.Add(string.Format($"(\"{_table}\".\"QualityProfileId\" = {profile.ProfileId} AND \"MovieFiles\".\"Quality\" LIKE '%_quality_: {belowCutoff},%')"));
+                    clauses.Add($"({profileIdColumn} = {profile.ProfileId} AND {fileTable}.\"Quality\" LIKE '%_quality_: {belowCutoff},%')");
                 }
             }
 

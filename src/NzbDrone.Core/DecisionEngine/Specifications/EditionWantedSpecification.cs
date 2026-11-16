@@ -4,7 +4,8 @@ using NzbDrone.Core.Parser.Model;
 namespace NzbDrone.Core.DecisionEngine.Specifications
 {
     // Rejects releases for editions a movie doesn't track, and (outside user-invoked searches)
-    // releases for tracked editions that are unmonitored.
+    // releases for unmonitored editions, including the standard edition when the movie only
+    // wants its extra editions.
     public class EditionWantedSpecification : IDownloadDecisionEngineSpecification
     {
         private readonly Logger _logger;
@@ -32,8 +33,8 @@ namespace NzbDrone.Core.DecisionEngine.Specifications
                 return DownloadSpecDecision.Reject(DownloadRejectionReason.EditionNotTracked, "Edition '{0}' is not tracked for this movie", slot.Name);
             }
 
-            // The standard edition follows the movie's monitored state, which MonitoredMovieSpecification checks.
-            if (slot.IsStandard || slot.Monitored || !subject.Movie.Monitored)
+            // An unmonitored movie is MonitoredMovieSpecification's to reject.
+            if (slot.Monitored || !subject.Movie.Monitored)
             {
                 return DownloadSpecDecision.Accept();
             }

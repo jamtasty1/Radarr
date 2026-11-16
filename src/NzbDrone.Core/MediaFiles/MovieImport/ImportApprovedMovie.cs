@@ -64,7 +64,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport
                 .Where(decision => decision.Approved)
                 .GroupBy(decision => (decision.LocalMovie.Movie.Id, GetEditionSlotId(decision.LocalMovie)))
                 .SelectMany(group => group
-                    .OrderByDescending(decision => decision.LocalMovie.Quality ?? new QualityModel { Quality = Quality.Unknown }, new QualityModelComparer(group.First().LocalMovie.Movie.QualityProfile))
+                    .OrderByDescending(decision => decision.LocalMovie.Quality ?? new QualityModel { Quality = Quality.Unknown }, new QualityModelComparer(group.First().LocalMovie.QualityProfile))
                     .ThenByDescending(decision => decision.LocalMovie.Size))
                 .ToList();
 

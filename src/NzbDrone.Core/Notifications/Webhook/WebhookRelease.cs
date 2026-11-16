@@ -18,6 +18,8 @@ namespace NzbDrone.Core.Notifications.Webhook
             Quality = quality.Quality.Name;
             QualityVersion = quality.Revision.Version;
             ReleaseGroup = remoteMovie.ParsedMovieInfo.ReleaseGroup;
+            Edition = remoteMovie.ParsedMovieInfo.Edition;
+            MovieEditionId = remoteMovie.EditionSlotId;
             ReleaseTitle = remoteMovie.Release.Title;
             Indexer = remoteMovie.Release.Indexer;
             Size = remoteMovie.Release.Size;
@@ -30,6 +32,10 @@ namespace NzbDrone.Core.Notifications.Webhook
         public string Quality { get; set; }
         public int QualityVersion { get; set; }
         public string ReleaseGroup { get; set; }
+        public string Edition { get; set; }
+
+        // 0 = the movie's standard edition.
+        public int MovieEditionId { get; set; }
         public string ReleaseTitle { get; set; }
         public string Indexer { get; set; }
         public long Size { get; set; }

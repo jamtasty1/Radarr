@@ -2,6 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import useApiQuery, { ApiError } from 'Helpers/Hooks/useApiQuery';
+import Movie from 'Movie/Movie';
+import useMovie from 'Movie/useMovie';
+import { updateItem } from 'Store/Actions/baseActions';
 import { fetchMovieFiles } from 'Store/Actions/movieFileActions';
 import translate from 'Utilities/String/translate';
 import {
@@ -96,6 +99,32 @@ export function useDeleteMovieEdition(movieId: number) {
   return useMutation<unknown, ApiError, number>({
     mutationFn: (id) => sendRequest(`/movieedition/${id}`, 'DELETE'),
     onSuccess: refresh,
+  });
+}
+
+// Turns the standard edition on or off for a movie, so it can want only its
+// extra editions.
+export function useSetStandardEditionMonitored(movieId: number) {
+  const dispatch = useDispatch();
+  const movie = useMovie(movieId);
+
+  return useMutation<Movie | undefined, ApiError, boolean>({
+    mutationFn: (standardEditionMonitored) =>
+      sendRequest<Movie>(`/movie/${movieId}`, 'PUT', {
+        ...movie,
+        standardEditionMonitored,
+      }),
+    onSuccess: (data) => {
+      if (data) {
+        dispatch(
+          updateItem({
+            section: 'movies',
+            id: movieId,
+            standardEditionMonitored: data.standardEditionMonitored,
+          })
+        );
+      }
+    },
   });
 }
 

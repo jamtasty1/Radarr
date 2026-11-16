@@ -7,6 +7,7 @@ using NzbDrone.Core.HealthCheck;
 using NzbDrone.Core.MediaFiles.Events;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Movies.Events;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.ThingiProvider;
@@ -42,7 +43,8 @@ namespace NzbDrone.Core.Notifications
             _logger = logger;
         }
 
-        private string GetMessage(Movie movie, QualityModel quality)
+        // edition: the non-standard edition the release or file is for, if any.
+        private string GetMessage(Movie movie, QualityModel quality, string edition = null)
         {
             var qualityString = quality.Quality.ToString();
             var imdbUrl = "https://www.imdb.com/title/" + movie.MovieMetadata.Value.ImdbId + "/";
@@ -52,11 +54,17 @@ namespace NzbDrone.Core.Notifications
                 qualityString += " Proper";
             }
 
-            return string.Format("{0} ({1}) [{2}] {3}",
+            return string.Format("{0} ({1}){4} [{2}] {3}",
                                     movie.Title,
                                     movie.Year,
                                     qualityString,
-                                    imdbUrl);
+                                    imdbUrl,
+                                    edition.IsNullOrWhiteSpace() ? string.Empty : " - " + edition);
+        }
+
+        private static string GetEditionName(EditionSlot slot)
+        {
+            return slot is { IsStandard: false, Tracked: true } ? slot.Name : null;
         }
 
         private bool ShouldHandleMovie(ProviderDefinition definition, Movie movie)
@@ -103,7 +111,7 @@ namespace NzbDrone.Core.Notifications
         {
             var grabMessage = new GrabMessage
             {
-                Message = GetMessage(message.Movie.Movie, message.Movie.ParsedMovieInfo.Quality),
+                Message = GetMessage(message.Movie.Movie, message.Movie.ParsedMovieInfo.Quality, GetEditionName(message.Movie.EditionSlot)),
                 Quality = message.Movie.ParsedMovieInfo.Quality,
                 Movie = message.Movie.Movie,
                 RemoteMovie = message.Movie,
@@ -141,7 +149,7 @@ namespace NzbDrone.Core.Notifications
 
             var downloadMessage = new DownloadMessage
             {
-                Message = GetMessage(message.MovieInfo.Movie, message.MovieInfo.Quality),
+                Message = GetMessage(message.MovieInfo.Movie, message.MovieInfo.Quality, GetEditionName(message.MovieInfo.EditionSlot)),
                 MovieInfo = message.MovieInfo,
                 MovieFile = message.ImportedMovie,
                 Movie = message.MovieInfo.Movie,
@@ -265,7 +273,7 @@ namespace NzbDrone.Core.Notifications
 
             if (movie != null)
             {
-                mess = GetMessage(movie, message.RemoteMovie.ParsedMovieInfo.Quality);
+                mess = GetMessage(movie, message.RemoteMovie.ParsedMovieInfo.Quality, GetEditionName(message.RemoteMovie.EditionSlot));
             }
 
             if (mess.IsNullOrWhiteSpace() && message.TrackedDownload.DownloadItem != null)
@@ -313,7 +321,7 @@ namespace NzbDrone.Core.Notifications
         public void Handle(MovieFileDeletedEvent message)
         {
             var deleteMessage = new MovieFileDeleteMessage();
-            deleteMessage.Message = GetMessage(message.MovieFile.Movie, message.MovieFile.Quality);
+            deleteMessage.Message = GetMessage(message.MovieFile.Movie, message.MovieFile.Quality, message.MovieFile.MovieEditionId != EditionSlot.StandardEditionId ? message.MovieFile.Edition : null);
             deleteMessage.MovieFile = message.MovieFile;
             deleteMessage.Movie = message.MovieFile.Movie;
             deleteMessage.Reason = message.Reason;

@@ -58,6 +58,27 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
         }
 
         [Test]
+        public void should_reject_standard_slot_when_only_extra_editions_are_wanted()
+        {
+            _remoteMovie.Movie.StandardEditionMonitored = false;
+            _remoteMovie.EditionSlot = EditionSlot.Standard(_remoteMovie.Movie, null);
+
+            var decision = Evaluate();
+
+            decision.Accepted.Should().BeFalse();
+            decision.Reason.Should().Be(DownloadRejectionReason.EditionNotMonitored);
+        }
+
+        [Test]
+        public void should_accept_unwanted_standard_slot_in_user_search()
+        {
+            _remoteMovie.Movie.StandardEditionMonitored = false;
+            _remoteMovie.EditionSlot = EditionSlot.Standard(_remoteMovie.Movie, null);
+
+            Evaluate(userInvokedSearch: true).Accepted.Should().BeTrue();
+        }
+
+        [Test]
         public void should_accept_monitored_tracked_edition()
         {
             GivenSlot(tracked: true, monitored: true);

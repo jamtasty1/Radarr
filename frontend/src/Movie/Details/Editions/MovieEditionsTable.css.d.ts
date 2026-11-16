@@ -10,6 +10,7 @@ interface CssExports {
   'monitored': string;
   'name': string;
   'path': string;
+  'profile': string;
   'status': string;
 }
 export const cssExports: CssExports;

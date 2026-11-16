@@ -194,6 +194,9 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                 localMovie.EditionSlot = _movieEditionService.Resolve(movie, localMovie.Edition);
             }
 
+            // Scored again now the edition, and with it the quality profile, is known.
+            _localMovieFormatCalculator.UpdateMovieCustomFormats(localMovie);
+
             return MapItem(_importDecisionMaker.GetDecision(localMovie, downloadClientItem), rootFolder, downloadId, null);
         }
 
@@ -392,7 +395,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                 item.Movie = decision.LocalMovie.Movie;
 
                 item.CustomFormats = _localMovieFormatCalculator.ParseMovieCustomFormats(decision.LocalMovie);
-                item.CustomFormatScore = item.Movie.QualityProfile?.CalculateCustomFormatScore(item.CustomFormats) ?? 0;
+                item.CustomFormatScore = decision.LocalMovie.QualityProfile?.CalculateCustomFormatScore(item.CustomFormats) ?? 0;
             }
 
             return item;

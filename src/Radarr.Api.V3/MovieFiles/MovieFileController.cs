@@ -59,7 +59,7 @@ namespace Radarr.Api.V3.MovieFiles
             var movieFile = _mediaFileService.GetMovie(id);
             var movie = _movieService.GetMovie(movieFile.MovieId);
 
-            var resource = movieFile.ToResource(movie, _upgradableSpecification, _formatCalculator);
+            var resource = ToResource(movieFile, movie);
 
             return resource;
         }
@@ -84,7 +84,7 @@ namespace Radarr.Api.V3.MovieFiles
 
             return TypedResults.Ok(movieFiles.GroupBy(e => e.MovieId)
                 .SelectMany(f => f.ToList()
-                    .ConvertAll(e => e.ToResource(_movieService.GetMovie(f.Key), _upgradableSpecification, _formatCalculator)))
+                    .ConvertAll(e => ToResource(e, _movieService.GetMovie(f.Key))))
                 .ToList());
         }
 
@@ -162,7 +162,7 @@ namespace Radarr.Api.V3.MovieFiles
 
             var movie = _movieService.GetMovie(movieFiles.First().MovieId);
 
-            return TypedResults.Ok(movieFiles.ConvertAll(f => f.ToResource(movie, _upgradableSpecification, _formatCalculator)));
+            return TypedResults.Ok(movieFiles.ConvertAll(f => ToResource(f, movie)));
         }
 
         [RestDeleteById]
@@ -258,7 +258,16 @@ namespace Radarr.Api.V3.MovieFiles
 
             var movie = _movieService.GetMovie(movieFiles.First().MovieId);
 
-            return TypedResults.Ok(movieFiles.ConvertAll(f => f.ToResource(movie, _upgradableSpecification, _formatCalculator)));
+            return TypedResults.Ok(movieFiles.ConvertAll(f => ToResource(f, movie)));
+        }
+
+        private MovieFileResource ToResource(MovieFile movieFile, Movie movie)
+        {
+            var profile = movieFile.MovieEditionId == EditionSlot.StandardEditionId
+                ? null
+                : _movieEditionService.GetQualityProfile(movie, movieFile.MovieEditionId);
+
+            return movieFile.ToResource(movie, _upgradableSpecification, _formatCalculator, profile);
         }
 
         [NonAction]

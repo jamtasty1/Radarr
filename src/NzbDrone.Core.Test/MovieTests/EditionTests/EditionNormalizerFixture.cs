@@ -98,5 +98,58 @@ namespace NzbDrone.Core.Test.MovieTests.EditionTests
 
             EditionNormalizer.FindMatch(editions, releaseEdition).Should().BeNull();
         }
+
+        [TestCase("Apocalypse.Now.1979.Redux.720p.WEB-DL.x264-GRP", "Redux")]
+        [TestCase("Apocalypse.Now.Redux.1979.1080p.BluRay.x264-GRP", "Redux")]
+        [TestCase("Mad.Max.Fury.Road.2015.Black.and.Chrome.Edition.1080p.BluRay.x264-GRP", "Black and Chrome")]
+        [TestCase("Apocalypse Now (1979) {edition-Redux} [Bluray-1080p].mkv", "Redux")]
+        [TestCase("Apocalypse.Now.1979.REDUX.2160p.UHD.BluRay.REMUX.HDR.HEVC-GRP.mkv", "Redux")]
+        public void should_find_tracked_edition_named_in_title(string title, string expected)
+        {
+            var editions = Editions("Redux", "Black and Chrome");
+
+            EditionNormalizer.FindInTitle(editions, title, new[] { "Apocalypse Now", "Mad Max: Fury Road" }).Name.Should().Be(expected);
+        }
+
+        [TestCase("Apocalypse.Now.1979.1080p.BluRay.x264-GRP")]
+        [TestCase("Apocalypse.Now.1979.1080p.BluRay.x264-REDUX")]
+        [TestCase(null)]
+        public void should_not_find_edition_in_title_without_it(string title)
+        {
+            EditionNormalizer.FindInTitle(Editions("Redux"), title, new[] { "Apocalypse Now" }).Should().BeNull();
+        }
+
+        [Test]
+        public void should_not_count_words_from_the_movie_title()
+        {
+            var editions = Editions("Final");
+
+            EditionNormalizer.FindInTitle(editions, "Final.Destination.2000.1080p.BluRay.x264-GRP", new[] { "Final Destination" }).Should().BeNull();
+        }
+
+        [Test]
+        public void should_only_search_after_year_when_movie_titles_are_unknown()
+        {
+            var editions = Editions("Redux");
+
+            EditionNormalizer.FindInTitle(editions, "Apocalypse.Now.Redux.1979.1080p.BluRay.x264-GRP").Should().BeNull();
+            EditionNormalizer.FindInTitle(editions, "Apocalypse.Now.1979.Redux.1080p.BluRay.x264-GRP").Name.Should().Be("Redux");
+        }
+
+        [Test]
+        public void should_prefer_most_specific_edition_in_title()
+        {
+            var editions = Editions("Chrome", "Black and Chrome");
+
+            EditionNormalizer.FindInTitle(editions, "Mad.Max.Fury.Road.2015.Black.and.Chrome.1080p-GRP").Name.Should().Be("Black and Chrome");
+        }
+
+        [Test]
+        public void should_not_find_edition_in_title_when_ambiguous()
+        {
+            var editions = Editions("Redux", "Workprint");
+
+            EditionNormalizer.FindInTitle(editions, "Apocalypse.Now.1979.Redux.Workprint.1080p-GRP").Should().BeNull();
+        }
     }
 }

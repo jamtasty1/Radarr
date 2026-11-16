@@ -99,7 +99,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                     Name = Path.GetFileNameWithoutExtension(file),
                     Movie = movie,
                     ReleaseGroup = string.Empty,
-                    Edition = Parser.Parser.ParseEdition(Path.GetFileNameWithoutExtension(file)),
+                    Edition = GetUnmappedFileEdition(movie, Path.GetFileNameWithoutExtension(file)),
                     MovieEditionId = _movieEditionService.ResolveSlotIdForTitle(movie, Path.GetFileNameWithoutExtension(file)),
                     Quality = new QualityModel(Quality.Unknown),
                     Languages = new List<Language> { Language.Unknown },
@@ -108,6 +108,22 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
                 }));
 
             return items;
+        }
+
+        // The parsed edition, or the tracked edition the name mentions when the parser doesn't know it
+        // (e.g. "Redux"), so the edition sent back on import puts the file in the same slot.
+        private string GetUnmappedFileEdition(Movie movie, string fileName)
+        {
+            var parsed = Parser.Parser.ParseEdition(fileName);
+
+            if (!EditionNormalizer.IsStandard(parsed))
+            {
+                return parsed;
+            }
+
+            var slotId = _movieEditionService.ResolveSlotIdForTitle(movie, fileName);
+
+            return slotId > 0 ? _movieEditionService.GetByMovieId(movie.Id).FirstOrDefault(e => e.Id == slotId)?.Name ?? parsed : parsed;
         }
 
         public List<ManualImportItem> GetMediaFiles(string path, string downloadId, int? movieId, bool filterExistingFiles)

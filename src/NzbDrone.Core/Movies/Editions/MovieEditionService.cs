@@ -23,7 +23,9 @@ namespace NzbDrone.Core.Movies.Editions
         void Delete(int id);
 
         // Works out which slot (standard or tracked edition) an edition string belongs to for a movie.
-        EditionSlot Resolve(Movie movie, string edition);
+        // Titles (release, folder or file names) are searched for tracked edition names the parser
+        // doesn't recognise when the edition string alone doesn't name a tracked edition.
+        EditionSlot Resolve(Movie movie, string edition, params string[] titles);
         EditionSlot ResolveForTitle(Movie movie, string releaseTitle);
         EditionSlot GetSlot(Movie movie, int movieEditionId);
 
@@ -146,30 +148,30 @@ namespace NzbDrone.Core.Movies.Editions
             _eventAggregator.PublishEvent(new MovieEditionsChangedEvent(edition.MovieId));
         }
 
-        public EditionSlot Resolve(Movie movie, string edition)
+        public EditionSlot Resolve(Movie movie, string edition, params string[] titles)
         {
             var editions = GetByMovieId(movie.Id);
 
-            if (editions.Empty() || EditionNormalizer.IsStandard(edition))
+            if (editions.Empty())
             {
                 return BuildStandardSlot(movie);
             }
 
-            var match = EditionNormalizer.FindMatch(editions, edition);
+            var match = FindEdition(movie, editions, edition, titles);
 
-            if (match == null)
+            if (match != null)
             {
-                return EditionSlot.Untracked(edition);
+                return BuildSlot(movie, match);
             }
 
-            return BuildSlot(movie, match);
+            return EditionNormalizer.IsStandard(edition) ? BuildStandardSlot(movie) : EditionSlot.Untracked(edition);
         }
 
         public EditionSlot ResolveForTitle(Movie movie, string releaseTitle)
         {
             var edition = releaseTitle.IsNullOrWhiteSpace() ? null : Parser.Parser.ParseEdition(releaseTitle);
 
-            return Resolve(movie, edition);
+            return Resolve(movie, edition, releaseTitle);
         }
 
         public int ResolveSlotIdForTitle(Movie movie, string releaseTitle)
@@ -182,13 +184,14 @@ namespace NzbDrone.Core.Movies.Editions
             }
 
             var edition = Parser.Parser.ParseEdition(releaseTitle);
+            var match = FindEdition(movie, editions, edition, new[] { releaseTitle });
 
-            if (EditionNormalizer.IsStandard(edition))
+            if (match != null)
             {
-                return EditionSlot.StandardEditionId;
+                return match.Id;
             }
 
-            return EditionNormalizer.FindMatch(editions, edition)?.Id ?? -1;
+            return EditionNormalizer.IsStandard(edition) ? EditionSlot.StandardEditionId : -1;
         }
 
         public EditionSlot GetSlot(Movie movie, int movieEditionId)
@@ -312,6 +315,25 @@ namespace NzbDrone.Core.Movies.Editions
                     "Movie already tracks edition '{0}'",
                     duplicate.Name);
             }
+        }
+
+        // The parsed edition text decides first; failing that, a tracked edition named in one of the
+        // titles (the first title that names one wins), which covers names the parser doesn't know.
+        private static MovieEdition FindEdition(Movie movie, List<MovieEdition> editions, string edition, IEnumerable<string> titles)
+        {
+            var match = EditionNormalizer.FindMatch(editions, edition);
+
+            if (match != null || titles == null)
+            {
+                return match;
+            }
+
+            var metadata = movie.MovieMetadata?.Value;
+            var movieTitles = new[] { metadata?.Title, metadata?.OriginalTitle }.Where(t => t.IsNotNullOrWhiteSpace()).ToList();
+
+            return titles.Where(t => t.IsNotNullOrWhiteSpace())
+                .Select(t => EditionNormalizer.FindInTitle(editions, t, movieTitles))
+                .FirstOrDefault(m => m != null);
         }
 
         private EditionSlot BuildSlot(Movie movie, MovieEdition edition)

@@ -278,6 +278,51 @@ namespace NzbDrone.Core.Test.MovieTests.EditionTests
         }
 
         [Test]
+        public void should_resolve_edition_the_parser_does_not_know_from_title()
+        {
+            GivenEdition(1, "Redux");
+
+            var slot = Subject.Resolve(_movie, null, "Movie.2000.Redux.720p.WEB-DL.x264-GRP");
+
+            slot.MovieEditionId.Should().Be(1);
+            slot.Tracked.Should().BeTrue();
+            slot.MovieFile.Should().BeNull();
+        }
+
+        [Test]
+        public void should_prefer_parsed_edition_over_title()
+        {
+            GivenEdition(1, "Redux");
+            GivenEdition(2, "Extended");
+
+            Subject.Resolve(_movie, "Extended", "Movie.2000.Extended.Redux.720p-GRP").MovieEditionId.Should().Be(2);
+        }
+
+        [Test]
+        public void should_resolve_tracked_edition_from_title_when_parsed_edition_is_untracked()
+        {
+            GivenEdition(1, "Redux");
+
+            Subject.Resolve(_movie, "Extended", "Movie.2000.Extended.Redux.720p-GRP").MovieEditionId.Should().Be(1);
+        }
+
+        [Test]
+        public void should_stay_standard_when_title_names_no_tracked_edition()
+        {
+            GivenEdition(1, "Redux");
+
+            Subject.Resolve(_movie, null, "Movie.2000.2160p.UHD.BluRay.REMUX-GRP").IsStandard.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_resolve_slot_id_for_edition_the_parser_does_not_know()
+        {
+            GivenEdition(1, "Redux");
+
+            Subject.ResolveSlotIdForTitle(_movie, "Movie.2000.Redux.720p.WEB-DL.x264-GRP").Should().Be(1);
+        }
+
+        [Test]
         public void should_set_edition_text_when_assigning_untagged_file_to_edition()
         {
             GivenEdition(1, "IMAX");

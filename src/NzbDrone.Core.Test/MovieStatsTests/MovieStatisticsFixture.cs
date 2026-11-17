@@ -6,6 +6,7 @@ using NUnit.Framework;
 using NzbDrone.Core.Languages;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.MovieStats;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.Test.Framework;
@@ -107,6 +108,58 @@ namespace NzbDrone.Core.Test.MovieStatsTests
             var stats = Subject.MovieStatistics();
 
             stats.First().MovieFileCount.Should().Be(1);
+        }
+
+        private void GivenStandardEdition(bool wanted, int movieFileId = 0)
+        {
+            _movie.StandardEditionMonitored = wanted;
+            _movie.MovieFileId = movieFileId;
+            Db.Update(_movie);
+        }
+
+        private void GivenEditions(int movieId, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                Db.Insert(new MovieEdition { MovieId = movieId, Name = name, Monitored = true, Added = System.DateTime.UtcNow });
+            }
+        }
+
+        [Test]
+        public void should_count_standard_edition_and_each_extra_edition()
+        {
+            GivenStandardEdition(true);
+            GivenEditions(_movie.Id, "Extended", "IMAX");
+            GivenEditions(_movie.Id + 100, "Director's Cut");
+
+            Subject.MovieStatistics().Single().EditionCount.Should().Be(3);
+            Subject.MovieStatistics(_movie.Id).Single().EditionCount.Should().Be(3);
+        }
+
+        [Test]
+        public void should_count_one_edition_for_movie_without_extra_editions()
+        {
+            GivenStandardEdition(true);
+
+            Subject.MovieStatistics().Single().EditionCount.Should().Be(1);
+        }
+
+        [Test]
+        public void should_not_count_unwanted_standard_edition_without_file()
+        {
+            GivenStandardEdition(false);
+            GivenEditions(_movie.Id, "Extended");
+
+            Subject.MovieStatistics().Single().EditionCount.Should().Be(1);
+        }
+
+        [Test]
+        public void should_count_unwanted_standard_edition_with_file()
+        {
+            GivenStandardEdition(false, movieFileId: 1);
+            GivenEditions(_movie.Id, "Extended");
+
+            Subject.MovieStatistics().Single().EditionCount.Should().Be(2);
         }
 
         [Test]

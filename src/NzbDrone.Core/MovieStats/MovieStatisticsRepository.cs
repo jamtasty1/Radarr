@@ -66,7 +66,9 @@ namespace NzbDrone.Core.MovieStats
         {
             return new SqlBuilder(_database.DatabaseType)
                 .Select(@"""Movies"".""Id"" AS MovieId,
-                        SUM(CASE WHEN ""MovieFileId"" > 0 THEN 1 ELSE 0 END) AS MovieFileCount")
+                        SUM(CASE WHEN ""MovieFileId"" > 0 THEN 1 ELSE 0 END) AS MovieFileCount,
+                        SUM(CASE WHEN ""StandardEditionMonitored"" OR ""MovieFileId"" > 0 THEN 1 ELSE 0 END)
+                            + (SELECT COUNT(*) FROM ""MovieEditions"" WHERE ""MovieEditions"".""MovieId"" = ""Movies"".""Id"") AS EditionCount")
                 .GroupBy<Movie>(x => x.Id);
         }
 

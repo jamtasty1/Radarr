@@ -88,6 +88,7 @@ function MovieIndexRow(props: MovieIndexRowProps) {
 
   const {
     sizeOnDisk = 0,
+    editionCount = 0,
     releaseGroups = [],
     movieFileQualities = [],
   } = statistics;
@@ -330,6 +331,14 @@ function MovieIndexRow(props: MovieIndexRowProps) {
           return (
             <VirtualTableRowCell key={name} className={styles[name]}>
               {formatBytes(sizeOnDisk)}
+            </VirtualTableRowCell>
+          );
+        }
+
+        if (name === 'editionCount') {
+          return (
+            <VirtualTableRowCell key={name} className={styles[name]}>
+              {editionCount}
             </VirtualTableRowCell>
           );
         }

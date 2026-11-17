@@ -173,6 +173,15 @@ function MovieIndexSortMenu(props: MovieIndexSortMenuProps) {
         </SortMenuItem>
 
         <SortMenuItem
+          name="editionCount"
+          sortKey={sortKey}
+          sortDirection={sortDirection}
+          onPress={onSortSelect}
+        >
+          {translate('Editions')}
+        </SortMenuItem>
+
+        <SortMenuItem
           name="certification"
           sortKey={sortKey}
           sortDirection={sortDirection}

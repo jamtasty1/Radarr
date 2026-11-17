@@ -97,6 +97,12 @@
   flex: 0 0 120px;
 }
 
+.editionCount {
+  composes: cell;
+
+  flex: 0 0 90px;
+}
+
 .imdbRating,
 .tmdbRating,
 .rottenTomatoesRating,

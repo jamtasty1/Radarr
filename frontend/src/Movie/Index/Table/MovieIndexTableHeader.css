@@ -87,6 +87,12 @@
   flex: 0 0 120px;
 }
 
+.editionCount {
+  composes: headerCell from '~Components/Table/VirtualTableHeaderCell.css';
+
+  flex: 0 0 90px;
+}
+
 .imdbRating,
 .tmdbRating,
 .rottenTomatoesRating,

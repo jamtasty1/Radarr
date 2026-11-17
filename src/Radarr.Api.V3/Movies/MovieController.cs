@@ -16,6 +16,7 @@ using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Movies;
 using NzbDrone.Core.Movies.Commands;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Movies.Events;
 using NzbDrone.Core.Movies.Translations;
 using NzbDrone.Core.MovieStats;
@@ -36,7 +37,8 @@ namespace Radarr.Api.V3.Movies
                                 IHandle<MoviesDeletedEvent>,
                                 IHandle<MovieRenamedEvent>,
                                 IHandle<MoviesBulkEditedEvent>,
-                                IHandle<MediaCoversUpdatedEvent>
+                                IHandle<MediaCoversUpdatedEvent>,
+                                IHandle<MovieEditionsChangedEvent>
     {
         private readonly IMovieService _moviesService;
         private readonly IMovieTranslationService _movieTranslationService;
@@ -349,6 +351,13 @@ namespace Radarr.Api.V3.Movies
             {
                 BroadcastResourceChange(ModelAction.Updated, MapToResource(movie));
             }
+        }
+
+        // The movie list shows how many editions each movie has.
+        [NonAction]
+        public void Handle(MovieEditionsChangedEvent message)
+        {
+            BroadcastResourceChange(ModelAction.Updated, message.MovieId);
         }
 
         [NonAction]

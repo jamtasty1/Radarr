@@ -29,6 +29,7 @@ export interface Collection {
 
 export interface Statistics {
   movieFileCount: number;
+  editionCount: number;
   releaseGroups: string[];
   movieFileQualities: Quality[];
   sizeOnDisk: number;

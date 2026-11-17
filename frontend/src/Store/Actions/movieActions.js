@@ -152,6 +152,12 @@ export const filterPredicates = {
     return predicate(sizeOnDisk, filterValue);
   },
 
+  editionCount: function(item, filterValue, type) {
+    const predicate = filterTypePredicates[type];
+
+    return predicate(item.statistics?.editionCount ?? 0, filterValue);
+  },
+
   inCinemas: function(item, filterValue, type) {
     return dateFilterPredicate(item.inCinemas, filterValue, type);
   },
@@ -345,6 +351,10 @@ export const sortPredicates = {
     const { statistics = {} } = item;
 
     return statistics.sizeOnDisk || 0;
+  },
+
+  editionCount: function(item) {
+    return item.statistics?.editionCount ?? 0;
   }
 };
 

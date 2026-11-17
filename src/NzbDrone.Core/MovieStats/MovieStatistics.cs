@@ -11,6 +11,9 @@ namespace NzbDrone.Core.MovieStats
     {
         public int MovieId { get; set; }
         public int MovieFileCount { get; set; }
+
+        // The standard edition (when wanted or present) plus each extra edition the movie tracks.
+        public int EditionCount { get; set; }
         public long SizeOnDisk { get; set; }
         public string ReleaseGroupsString { get; set; }
         public string MovieFileQualitiesString { get; set; }

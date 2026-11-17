@@ -176,6 +176,12 @@ export const defaultState = {
       isVisible: false
     },
     {
+      name: 'editionCount',
+      label: () => translate('Editions'),
+      isSortable: true,
+      isVisible: false
+    },
+    {
       name: 'genres',
       label: () => translate('Genres'),
       isSortable: false,
@@ -485,6 +491,11 @@ export const defaultState = {
       label: () => translate('SizeOnDisk'),
       type: filterBuilderTypes.NUMBER,
       valueType: filterBuilderValueTypes.BYTES
+    },
+    {
+      name: 'editionCount',
+      label: () => translate('Editions'),
+      type: filterBuilderTypes.NUMBER
     },
     {
       name: 'genres',

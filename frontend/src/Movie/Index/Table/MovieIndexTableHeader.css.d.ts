@@ -6,6 +6,7 @@ interface CssExports {
   'certification': string;
   'collection': string;
   'digitalRelease': string;
+  'editionCount': string;
   'genres': string;
   'imdbRating': string;
   'inCinemas': string;

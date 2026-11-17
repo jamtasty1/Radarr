@@ -78,6 +78,10 @@ namespace Radarr.Api.V3.Config
                 ? null
                 : _filenameSampleService.GetMovieFolderSample(nameSpec);
 
+            sampleResource.EditionMovieExample = nameSpec.StandardMovieFormat.IsNullOrWhiteSpace()
+                ? null
+                : _filenameSampleService.GetEditionMovieSample(nameSpec).FileName;
+
             return TypedResults.Ok(sampleResource);
         }
 

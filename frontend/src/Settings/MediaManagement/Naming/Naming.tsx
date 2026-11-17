@@ -127,12 +127,42 @@ function Naming() {
     },
   ];
 
+  const editionTagStyleOptions = [
+    { key: 'plex', value: translate('EditionTagStylePlex') },
+    { key: 'jellyfin', value: translate('EditionTagStyleJellyfin') },
+  ];
+
+  const editionTagStyleHelpTexts = [translate('EditionTagStyleHelpText')];
+  let editionTagStyleWarning: string | undefined = undefined;
+
   const standardMovieFormatHelpTexts = [];
   const standardMovieFormatErrors = [];
   const movieFolderFormatHelpTexts = [];
   const movieFolderFormatErrors = [];
 
   if (examplesPopulated) {
+    if (examples.editionMovieExample) {
+      editionTagStyleHelpTexts.push(
+        `${translate('Edition')}: ${examples.editionMovieExample}`
+      );
+    }
+
+    // Jellyfin only groups a folder's files as versions when every name, the standard
+    // edition's included, is the folder name optionally followed by " - ...".
+    const folder = examples.movieFolderExample;
+    const movie = examples.movieExample;
+
+    if (
+      hasSettings &&
+      settings.editionTagStyle.value === 'jellyfin' &&
+      folder &&
+      movie &&
+      movie !== folder &&
+      !movie.startsWith(`${folder} -`)
+    ) {
+      editionTagStyleWarning = translate('EditionTagStyleJellyfinWarning');
+    }
+
     if (examples.movieExample) {
       standardMovieFormatHelpTexts.push(
         `${translate('Movie')}: ${examples.movieExample}`
@@ -223,6 +253,22 @@ function Naming() {
                   ...standardMovieFormatErrors,
                   ...settings.standardMovieFormat.errors,
                 ]}
+              />
+            </FormGroup>
+          ) : null}
+
+          {renameMovies ? (
+            <FormGroup size={sizes.MEDIUM}>
+              <FormLabel>{translate('EditionTagStyle')}</FormLabel>
+
+              <FormInputGroup
+                type={inputTypes.SELECT}
+                name="editionTagStyle"
+                values={editionTagStyleOptions}
+                onChange={handleInputChange}
+                {...settings.editionTagStyle}
+                helpTexts={editionTagStyleHelpTexts}
+                helpTextWarning={editionTagStyleWarning}
               />
             </FormGroup>
           ) : null}

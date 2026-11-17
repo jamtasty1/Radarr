@@ -10,6 +10,7 @@ namespace NzbDrone.Core.Organizer
     public interface IFilenameSampleService
     {
         SampleResult GetMovieSample(NamingConfig nameSpec);
+        SampleResult GetEditionMovieSample(NamingConfig nameSpec);
         string GetMovieFolderSample(NamingConfig nameSpec);
     }
 
@@ -18,6 +19,7 @@ namespace NzbDrone.Core.Organizer
         private readonly IBuildFileNames _buildFileNames;
 
         private static MovieFile _movieFile;
+        private static MovieFile _editionMovieFile;
         private static Movie _movie;
         private static List<CustomFormat> _customFormats;
 
@@ -57,6 +59,18 @@ namespace NzbDrone.Core.Organizer
                 ReleaseGroup = "EVOLVE",
                 MediaInfo = mediaInfo,
                 Edition = "Ultimate extended edition",
+            };
+
+            // A file in one of the movie's extra editions.
+            _editionMovieFile = new MovieFile
+            {
+                Quality = _movieFile.Quality,
+                RelativePath = "The.Movie.Title.2010.Directors.Cut.1080p.BluRay.DTS.x264-EVOLVE.mkv",
+                SceneName = "The.Movie.Title.2010.Directors.Cut.1080p.BluRay.DTS.x264-EVOLVE",
+                ReleaseGroup = "EVOLVE",
+                MediaInfo = mediaInfo,
+                Edition = "Director's Cut",
+                MovieEditionId = 1,
             };
 
             _movie = new Movie
@@ -100,6 +114,16 @@ namespace NzbDrone.Core.Organizer
             };
 
             return result;
+        }
+
+        public SampleResult GetEditionMovieSample(NamingConfig nameSpec)
+        {
+            return new SampleResult
+            {
+                FileName = BuildSample(_movie, _editionMovieFile, nameSpec),
+                Movie = _movie,
+                MovieFile = _editionMovieFile
+            };
         }
 
         public string GetMovieFolderSample(NamingConfig nameSpec)

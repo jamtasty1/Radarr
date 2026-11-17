@@ -157,15 +157,15 @@ namespace NzbDrone.Core.Organizer
                 }
             }
 
-            AppendEditionIfMissing(components, pattern, movieFile);
+            AppendEditionIfMissing(components, pattern, movie, movieFile, namingConfig);
 
             return Path.Combine(components.ToArray());
         }
 
         // Files for a movie's non-standard editions share its folder, so they must not end up with the
         // same name as the standard file. If the naming format has no edition token, tag the name the
-        // way Plex recognises editions.
-        private static void AppendEditionIfMissing(List<string> components, string pattern, MovieFile movieFile)
+        // way the chosen media server recognises editions.
+        private void AppendEditionIfMissing(List<string> components, string pattern, Movie movie, MovieFile movieFile, NamingConfig namingConfig)
         {
             if (movieFile.MovieEditionId == 0 ||
                 movieFile.Edition.IsNullOrWhiteSpace() ||
@@ -177,7 +177,42 @@ namespace NzbDrone.Core.Organizer
 
             var edition = CleanFileName(GetEditionToken(movieFile));
 
+            if (namingConfig.EditionTagStyle == EditionTagStyle.Jellyfin)
+            {
+                components[^1] = AddVersionLabel(components[^1], GetMovieFolderName(movie, namingConfig), edition);
+                return;
+            }
+
             components[^1] = $"{components[^1]} {{edition-{edition}}}";
+        }
+
+        // Jellyfin and Emby treat files as versions of one movie when each name is the folder name
+        // followed by " - <label>", so the edition goes straight after the folder name:
+        // "Movie (2010) Bluray-1080p" -> "Movie (2010) - Director's Cut Bluray-1080p". A name that doesn't
+        // start with the folder name gets the label at the end instead.
+        private static string AddVersionLabel(string fileName, string folderName, string label)
+        {
+            if (folderName.IsNullOrWhiteSpace() || !fileName.StartsWith(folderName, StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{fileName} - {label}";
+            }
+
+            var prefix = fileName.Substring(0, folderName.Length);
+            var rest = fileName.Substring(folderName.Length).Trim();
+
+            return rest.IsNullOrWhiteSpace() ? $"{prefix} - {label}" : $"{prefix} - {label} {rest}";
+        }
+
+        // The folder the file will sit in: the movie's actual folder when it has one (that's what the
+        // media server compares against), otherwise the folder the naming format would give it.
+        private string GetMovieFolderName(Movie movie, NamingConfig namingConfig)
+        {
+            if (movie.Path.IsNotNullOrWhiteSpace())
+            {
+                return Path.GetFileName(movie.Path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+            }
+
+            return namingConfig.MovieFolderFormat.IsNullOrWhiteSpace() ? null : Path.GetFileName(GetMovieFolder(movie, namingConfig));
         }
 
         public string BuildFilePath(Movie movie, string fileName, string extension)

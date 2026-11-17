@@ -9,6 +9,7 @@ using NzbDrone.Core.Movies;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Qualities;
 using NzbDrone.Core.Test.Framework;
+using NzbDrone.Test.Common;
 
 namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 {
@@ -213,6 +214,62 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 
             Subject.BuildFileName(_movie, _movieFile)
                    .Should().Be("Movie Title {edition-Extended}");
+        }
+
+        private void GivenJellyfinStyle(string movieFormat, string folder = "Movie Title (2010)")
+        {
+            _movie.Year = 2010;
+            _movie.Path = folder == null ? null : $@"C:\Movies\{folder}".AsOsAgnostic();
+            _movieFile.Quality = new QualityModel(Quality.Bluray1080p);
+            _movieFile.Edition = "Director's Cut";
+            _movieFile.MovieEditionId = 3;
+            _namingConfig.StandardMovieFormat = movieFormat;
+            _namingConfig.MovieFolderFormat = "{Movie Title} ({Release Year})";
+            _namingConfig.EditionTagStyle = EditionTagStyle.Jellyfin;
+        }
+
+        [TestCase("{Movie Title} ({Release Year}) {Quality Full}", "Movie Title (2010) - Director's Cut Bluray-1080p")]
+        [TestCase("{Movie Title} ({Release Year}) - {Quality Full}", "Movie Title (2010) - Director's Cut - Bluray-1080p")]
+        [TestCase("{Movie Title} ({Release Year}) [{Quality Full}]", "Movie Title (2010) - Director's Cut [Bluray-1080p]")]
+        [TestCase("{Movie Title} ({Release Year})", "Movie Title (2010) - Director's Cut")]
+        public void should_put_jellyfin_version_label_after_folder_name(string movieFormat, string expected)
+        {
+            GivenJellyfinStyle(movieFormat);
+
+            Subject.BuildFileName(_movie, _movieFile).Should().Be(expected);
+        }
+
+        [Test]
+        public void should_use_folder_format_for_jellyfin_label_when_movie_has_no_path()
+        {
+            GivenJellyfinStyle("{Movie Title} ({Release Year}) {Quality Full}", folder: null);
+
+            Subject.BuildFileName(_movie, _movieFile).Should().Be("Movie Title (2010) - Director's Cut Bluray-1080p");
+        }
+
+        [Test]
+        public void should_append_jellyfin_version_label_when_name_does_not_start_with_folder_name()
+        {
+            GivenJellyfinStyle("{Movie Title} ({Release Year}) {Quality Full}", folder: "Some Other Folder");
+
+            Subject.BuildFileName(_movie, _movieFile).Should().Be("Movie Title (2010) Bluray-1080p - Director's Cut");
+        }
+
+        [Test]
+        public void should_not_add_jellyfin_version_label_to_standard_edition_file()
+        {
+            GivenJellyfinStyle("{Movie Title} ({Release Year}) {Quality Full}");
+            _movieFile.MovieEditionId = 0;
+
+            Subject.BuildFileName(_movie, _movieFile).Should().Be("Movie Title (2010) Bluray-1080p");
+        }
+
+        [Test]
+        public void should_not_add_jellyfin_version_label_when_format_has_edition_token()
+        {
+            GivenJellyfinStyle("{Movie Title} ({Release Year}) - {Edition Tags} {Quality Full}");
+
+            Subject.BuildFileName(_movie, _movieFile).Should().Be("Movie Title (2010) - Director's Cut Bluray-1080p");
         }
     }
 }

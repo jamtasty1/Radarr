@@ -10,5 +10,6 @@ namespace Radarr.Api.V3.Config
         public ColonReplacementFormat ColonReplacementFormat { get; set; }
         public string StandardMovieFormat { get; set; }
         public string MovieFolderFormat { get; set; }
+        public EditionTagStyle EditionTagStyle { get; set; }
     }
 }

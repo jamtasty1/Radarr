@@ -6,6 +6,9 @@ namespace Radarr.Api.V3.Config
     {
         public string MovieExample { get; set; }
         public string MovieFolderExample { get; set; }
+
+        // A file in a non-standard edition, showing how the edition is tagged.
+        public string EditionMovieExample { get; set; }
     }
 
     public static class NamingConfigResourceMapper
@@ -20,7 +23,8 @@ namespace Radarr.Api.V3.Config
                 ReplaceIllegalCharacters = model.ReplaceIllegalCharacters,
                 ColonReplacementFormat = model.ColonReplacementFormat,
                 StandardMovieFormat = model.StandardMovieFormat,
-                MovieFolderFormat = model.MovieFolderFormat
+                MovieFolderFormat = model.MovieFolderFormat,
+                EditionTagStyle = model.EditionTagStyle
             };
         }
 
@@ -35,6 +39,7 @@ namespace Radarr.Api.V3.Config
                 ColonReplacementFormat = resource.ColonReplacementFormat,
                 StandardMovieFormat = resource.StandardMovieFormat,
                 MovieFolderFormat = resource.MovieFolderFormat,
+                EditionTagStyle = resource.EditionTagStyle,
             };
         }
     }

@@ -290,7 +290,8 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
   );
 
   const { data: editions = [] } = useMovieEditions(movie?.id ?? 0);
-  const hasEditions = editions.length > 0;
+  const standardEditionName = movie?.standardEditionName;
+  const hasEditions = editions.length > 0 || !!standardEditionName;
   const isEditionUntracked = hasEditions && movieEditionId === -1;
 
   let editionLabel = edition;
@@ -298,7 +299,11 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
   if (isEditionUntracked) {
     editionLabel = translate('EditionNotTracked', { edition: edition ?? '' });
   } else if (hasEditions) {
-    editionLabel = getEditionName(editions, movieEditionId);
+    editionLabel = getEditionName(
+      editions,
+      movieEditionId,
+      standardEditionName
+    );
   }
 
   const showEditionPlaceholder = isSelected && !editionLabel;
@@ -464,6 +469,7 @@ function InteractiveImportRow(props: InteractiveImportRowProps) {
         edition={edition ?? ''}
         movieEditionId={movieEditionId}
         editions={editions}
+        standardEditionName={standardEditionName}
         modalTitle={modalTitle}
         onEditionSelect={onEditionSelect}
         onModalClose={onSelectModalClose}

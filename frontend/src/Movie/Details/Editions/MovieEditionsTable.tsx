@@ -109,6 +109,7 @@ function MovieEditionsTable({ movieId }: MovieEditionsTableProps) {
                 }
                 hasEditions={sortedEditions.length > 0}
                 movieQualityProfileId={movie.qualityProfileId}
+                standardEditionName={movie.standardEditionName}
                 movieFile={standardFile}
               />
 

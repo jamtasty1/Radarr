@@ -13,6 +13,7 @@ using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.MediaInfo;
 using NzbDrone.Core.Movies;
+using NzbDrone.Core.Movies.Editions;
 using NzbDrone.Core.Movies.Translations;
 using NzbDrone.Core.Parser;
 using NzbDrone.Core.Qualities;
@@ -167,7 +168,7 @@ namespace NzbDrone.Core.Organizer
         // way the chosen media server recognises editions.
         private void AppendEditionIfMissing(List<string> components, string pattern, Movie movie, MovieFile movieFile, NamingConfig namingConfig)
         {
-            if (movieFile.MovieEditionId == 0 ||
+            if ((movieFile.MovieEditionId == 0 && !EditionSlot.HasNamedStandard(movie)) ||
                 movieFile.Edition.IsNullOrWhiteSpace() ||
                 components.Count == 0 ||
                 EditionTagsTokenRegex.IsMatch(pattern))

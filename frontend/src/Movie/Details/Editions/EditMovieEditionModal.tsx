@@ -14,8 +14,14 @@ import ModalContent from 'Components/Modal/ModalContent';
 import ModalFooter from 'Components/Modal/ModalFooter';
 import ModalHeader from 'Components/Modal/ModalHeader';
 import { inputTypes, kinds, sizes } from 'Helpers/Props';
+import { THEATRICAL_EDITION_NAME } from 'Movie/Editions/commonEditions';
+import EditionNameInput from 'Movie/Editions/EditionNameInput';
 import { MovieEdition } from 'Movie/Editions/MovieEdition';
-import { useSaveMovieEdition } from 'Movie/Editions/useMovieEditions';
+import {
+  useMovieEditions,
+  useSaveMovieEdition,
+} from 'Movie/Editions/useMovieEditions';
+import useMovie from 'Movie/useMovie';
 import { InputChanged } from 'typings/inputs';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
@@ -63,9 +69,24 @@ function EditMovieEditionModalContent({
     reset();
   }, [name, reset]);
 
-  const handleNameChange = useCallback(({ value }: InputChanged<string>) => {
-    setName(value);
-  }, []);
+  const movie = useMovie(movieId);
+  const { data: editions = [] } = useMovieEditions(movieId);
+  const standardEditionName = movie?.standardEditionName;
+
+  // Other editions' names (and the standard edition's cut) can't be reused.
+  const takenNames = useMemo(
+    () => [
+      ...editions.filter((e) => e.id !== edition?.id).map((e) => e.name),
+      ...(standardEditionName ? [standardEditionName] : []),
+    ],
+    [editions, edition, standardEditionName]
+  );
+
+  // Theatrical can only be its own edition once the standard edition is a cut.
+  const extraNames = useMemo(
+    () => (standardEditionName ? [THEATRICAL_EDITION_NAME] : []),
+    [standardEditionName]
+  );
 
   const handleMonitoredChange = useCallback(
     ({ value }: InputChanged<boolean>) => {
@@ -109,17 +130,13 @@ function EditMovieEditionModalContent({
         ) : null}
 
         <Form>
-          <FormGroup>
-            <FormLabel>{translate('Name')}</FormLabel>
-
-            <FormInputGroup
-              type={inputTypes.TEXT}
-              name="name"
-              value={name}
-              helpText={translate('EditionNameHelpText')}
-              onChange={handleNameChange}
-            />
-          </FormGroup>
+          <EditionNameInput
+            name={name}
+            helpText={translate('EditionNameHelpText')}
+            takenNames={takenNames}
+            extraNames={extraNames}
+            onChange={setName}
+          />
 
           <FormGroup>
             <FormLabel>{translate('Monitored')}</FormLabel>

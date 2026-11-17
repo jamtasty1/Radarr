@@ -40,6 +40,9 @@ namespace NzbDrone.Core.Movies.Editions
 
         // Moves an existing file into a different slot of its movie.
         MovieFile AssignFile(MovieFile movieFile, int movieEditionId);
+
+        // Names the standard edition for the cut the movie's main copy is (e.g. "Extended"); blank resets it.
+        void RenameStandardEdition(int movieId, string name);
     }
 
     public class MovieEditionService : IMovieEditionService, IHandle<MoviesDeletedEvent>
@@ -95,7 +98,7 @@ namespace NzbDrone.Core.Movies.Editions
             var movie = _movieService.GetMovie(edition.MovieId);
 
             edition.Name = edition.Name?.Trim();
-            Validate(edition);
+            Validate(edition, movie);
 
             edition.Added = DateTime.UtcNow;
             edition = _repository.Insert(edition);
@@ -117,7 +120,7 @@ namespace NzbDrone.Core.Movies.Editions
             edition.MovieId = existing.MovieId;
             edition.Added = existing.Added;
             edition.Name = edition.Name?.Trim();
-            Validate(edition);
+            Validate(edition, _movieService.GetMovie(edition.MovieId));
 
             edition = _repository.Update(edition);
             _cache.Clear();
@@ -151,20 +154,14 @@ namespace NzbDrone.Core.Movies.Editions
         public EditionSlot Resolve(Movie movie, string edition, params string[] titles)
         {
             var editions = GetByMovieId(movie.Id);
+            var id = ResolveEditionId(movie, editions, edition, titles);
 
-            if (editions.Empty())
+            if (id == EditionSlot.StandardEditionId)
             {
                 return BuildStandardSlot(movie);
             }
 
-            var match = FindEdition(movie, editions, edition, titles);
-
-            if (match != null)
-            {
-                return BuildSlot(movie, match);
-            }
-
-            return EditionNormalizer.IsStandard(edition) ? BuildStandardSlot(movie) : EditionSlot.Untracked(edition);
+            return id > 0 ? BuildSlot(movie, editions.First(e => e.Id == id)) : EditionSlot.Untracked(edition);
         }
 
         public EditionSlot ResolveForTitle(Movie movie, string releaseTitle)
@@ -176,22 +173,64 @@ namespace NzbDrone.Core.Movies.Editions
 
         public int ResolveSlotIdForTitle(Movie movie, string releaseTitle)
         {
-            var editions = GetByMovieId(movie.Id);
+            var edition = releaseTitle.IsNullOrWhiteSpace() ? null : Parser.Parser.ParseEdition(releaseTitle);
 
-            if (editions.Empty() || releaseTitle.IsNullOrWhiteSpace())
+            return ResolveEditionId(movie, GetByMovieId(movie.Id), edition, new[] { releaseTitle });
+        }
+
+        public void RenameStandardEdition(int movieId, string name)
+        {
+            var movie = _movieService.GetMovie(movieId);
+
+            name = name?.Trim();
+
+            if (name.IsNullOrWhiteSpace() || name.Equals(EditionSlot.StandardEditionName, StringComparison.OrdinalIgnoreCase))
             {
-                return EditionSlot.StandardEditionId;
+                name = null;
             }
 
-            var edition = Parser.Parser.ParseEdition(releaseTitle);
-            var match = FindEdition(movie, editions, edition, new[] { releaseTitle });
+            var editions = GetByMovieId(movieId);
 
-            if (match != null)
+            if (EditionNormalizer.IsStandard(name))
             {
-                return match.Id;
+                // Untagged releases can only belong to one edition.
+                var standardNamed = editions.FirstOrDefault(e => EditionNormalizer.IsStandard(e.Name));
+
+                if (standardNamed != null)
+                {
+                    throw new NzbDroneClientException(HttpStatusCode.Conflict,
+                        "'{0}' is tracked as its own edition, so the standard edition needs the name of a cut such as Extended. Remove '{0}' first.",
+                        standardNamed.Name);
+                }
+            }
+            else
+            {
+                var duplicate = editions.FirstOrDefault(e => e.Key == EditionNormalizer.Normalize(name));
+
+                if (duplicate != null)
+                {
+                    throw new NzbDroneClientException(HttpStatusCode.Conflict,
+                        "Movie already tracks edition '{0}'",
+                        duplicate.Name);
+                }
             }
 
-            return EditionNormalizer.IsStandard(edition) ? EditionSlot.StandardEditionId : -1;
+            movie.StandardEditionName = name;
+            _movieService.UpdateMovie(movie);
+
+            // Keep the standard file's edition text in line with its cut so naming and later matching agree.
+            var file = GetStandardFile(movie);
+
+            if (file != null && !EditionNormalizer.IsStandard(name) &&
+                EditionNormalizer.FindMatch(new[] { new MovieEdition { Name = name } }, file.Edition) == null)
+            {
+                file.Edition = name;
+                _mediaFileService.Update(file);
+            }
+
+            _logger.Info("Named the standard edition of {0} '{1}'", movie, EditionSlot.GetStandardName(movie));
+
+            _eventAggregator.PublishEvent(new MovieEditionsChangedEvent(movieId));
         }
 
         public EditionSlot GetSlot(Movie movie, int movieEditionId)
@@ -250,7 +289,7 @@ namespace NzbDrone.Core.Movies.Editions
             var wasStandard = movieFile.MovieEditionId == EditionSlot.StandardEditionId;
 
             // Keep the file's edition text in line with its slot so naming and later matching agree.
-            if (target.IsStandard)
+            if (target.IsStandard && !target.IsNamedCut)
             {
                 if (!EditionNormalizer.IsStandard(movieFile.Edition))
                 {
@@ -287,18 +326,26 @@ namespace NzbDrone.Core.Movies.Editions
             _cache.Clear();
         }
 
-        private void Validate(MovieEdition edition)
+        private void Validate(MovieEdition edition, Movie movie)
         {
             if (edition.Name.IsNullOrWhiteSpace())
             {
                 throw new NzbDroneClientException(HttpStatusCode.BadRequest, "Edition name is required");
             }
 
-            if (EditionNormalizer.IsStandard(edition.Name))
+            // Only once the standard edition is named for a cut can untagged/theatrical releases have an edition of their own.
+            if (EditionNormalizer.IsStandard(edition.Name) && !EditionSlot.HasNamedStandard(movie))
             {
                 throw new NzbDroneClientException(HttpStatusCode.BadRequest,
-                    "'{0}' is the standard edition, which every movie already tracks",
+                    "'{0}' is the standard edition, which every movie already tracks. Rename the standard edition to the cut it is (e.g. Extended) to track '{0}' separately.",
                     edition.Name);
+            }
+
+            if (EditionSlot.HasNamedStandard(movie) && edition.Key == EditionNormalizer.Normalize(movie.StandardEditionName))
+            {
+                throw new NzbDroneClientException(HttpStatusCode.Conflict,
+                    "The standard edition is already '{0}'",
+                    movie.StandardEditionName);
             }
 
             if (edition.QualityProfileId < 0 || (edition.QualityProfileId > 0 && !_qualityProfileService.Exists(edition.QualityProfileId)))
@@ -315,6 +362,43 @@ namespace NzbDrone.Core.Movies.Editions
                     "Movie already tracks edition '{0}'",
                     duplicate.Name);
             }
+        }
+
+        // 0 = standard, an edition's id, or -1 for an edition the movie doesn't track.
+        private static int ResolveEditionId(Movie movie, List<MovieEdition> editions, string edition, IEnumerable<string> titles)
+        {
+            var namedStandard = EditionSlot.HasNamedStandard(movie);
+
+            if (editions.Empty() && !namedStandard)
+            {
+                return EditionSlot.StandardEditionId;
+            }
+
+            // A standard edition named for a cut is matched like any other edition.
+            var candidates = namedStandard
+                ? editions.Append(new MovieEdition { Id = EditionSlot.StandardEditionId, Name = movie.StandardEditionName }).ToList()
+                : editions;
+
+            var match = FindEdition(movie, candidates, edition, titles);
+
+            if (match != null)
+            {
+                return match.Id;
+            }
+
+            if (!EditionNormalizer.IsStandard(edition))
+            {
+                return -1;
+            }
+
+            if (!namedStandard)
+            {
+                return EditionSlot.StandardEditionId;
+            }
+
+            // The standard edition is a particular cut, so untagged/theatrical releases only belong
+            // to an edition tracked for them (e.g. "Theatrical").
+            return editions.FirstOrDefault(e => EditionNormalizer.IsStandard(e.Name))?.Id ?? -1;
         }
 
         // The parsed edition text decides first; failing that, a tracked edition named in one of the

@@ -66,6 +66,9 @@ namespace Radarr.Api.V3.Movies
         // Null (from clients that don't know about editions) keeps the current setting; new movies default to wanting it.
         public bool? StandardEditionMonitored { get; set; }
 
+        // Read-only here; rename it with PUT /api/v3/movieedition/standard.
+        public string StandardEditionName { get; set; }
+
         // Wanted pages only, when the movie has extra editions: the editions that are missing, or for
         // Cutoff Unmet the editions below cutoff with their file's quality, e.g. "Extended (Bluray-1080p)".
         public List<string> WantedEditions { get; set; }
@@ -148,6 +151,7 @@ namespace Radarr.Api.V3.Movies
 
                 Monitored = model.Monitored,
                 StandardEditionMonitored = model.StandardEditionMonitored,
+                StandardEditionName = model.StandardEditionName,
                 MinimumAvailability = model.MinimumAvailability,
 
                 IsAvailable = model.IsAvailable(availDelay),

@@ -11,6 +11,7 @@ import ModalFooter from 'Components/Modal/ModalFooter';
 import ModalHeader from 'Components/Modal/ModalHeader';
 import { inputTypes, kinds, scrollDirections } from 'Helpers/Props';
 import { MovieEdition } from 'Movie/Editions/MovieEdition';
+import { getStandardEditionName } from 'Movie/Editions/useMovieEditions';
 import { InputChanged } from 'typings/inputs';
 import translate from 'Utilities/String/translate';
 
@@ -23,20 +24,16 @@ interface SelectEditionModalContentProps {
   edition: string;
   movieEditionId?: number;
   editions: MovieEdition[];
+  standardEditionName?: string | null;
   modalTitle: string;
   onEditionSelect(edition: string): void;
   onModalClose(): void;
 }
 
 function getInitialValue(
-  edition: string,
   movieEditionId: number | undefined,
   editions: MovieEdition[]
 ) {
-  if (!editions.length) {
-    return edition;
-  }
-
   return editions.find((e) => e.id === movieEditionId)?.name ?? STANDARD_VALUE;
 }
 
@@ -44,20 +41,27 @@ function SelectEditionModalContent({
   edition: initialEdition,
   movieEditionId,
   editions,
+  standardEditionName,
   modalTitle,
   onEditionSelect,
   onModalClose,
 }: SelectEditionModalContentProps) {
+  // A standard edition named for a cut is a choice in its own right.
+  const hasChoices = editions.length > 0 || !!standardEditionName;
+
   const [edition, setEdition] = useState(() =>
-    getInitialValue(initialEdition, movieEditionId, editions)
+    hasChoices ? getInitialValue(movieEditionId, editions) : initialEdition
   );
 
   const options = useMemo(
     () => [
-      { key: STANDARD_VALUE, value: translate('StandardEdition') },
+      {
+        key: STANDARD_VALUE,
+        value: getStandardEditionName(standardEditionName),
+      },
       ...editions.map(({ name }) => ({ key: name, value: name })),
     ],
-    [editions]
+    [editions, standardEditionName]
   );
 
   const handleChange = useCallback(({ value }: InputChanged<string>) => {
@@ -65,8 +69,12 @@ function SelectEditionModalContent({
   }, []);
 
   const handleSelectPress = useCallback(() => {
-    onEditionSelect(edition === STANDARD_VALUE ? '' : edition);
-  }, [edition, onEditionSelect]);
+    // A standard edition named for a cut is chosen by its name; otherwise an
+    // empty edition is the standard one.
+    onEditionSelect(
+      edition === STANDARD_VALUE ? standardEditionName ?? '' : edition
+    );
+  }, [edition, standardEditionName, onEditionSelect]);
 
   return (
     <ModalContent onModalClose={onModalClose}>
@@ -79,7 +87,7 @@ function SelectEditionModalContent({
           <FormGroup>
             <FormLabel>{translate('Edition')}</FormLabel>
 
-            {editions.length ? (
+            {hasChoices ? (
               <FormInputGroup
                 type={inputTypes.SELECT}
                 name="edition"

@@ -12,12 +12,12 @@ import FileEditModalContent from './FileEditModalContent';
 
 // Each edition holds one file, so editions already filled by another file
 // can't be chosen.
-function getEditionSlotOptions(movieFile, movieFiles, editions) {
+function getEditionSlotOptions(movieFile, movieFiles, editions, standardEditionName) {
   if (!editions.length) {
     return [];
   }
 
-  return getEditionOptions(editions).map(({ key, value }) => {
+  return getEditionOptions(editions, standardEditionName).map(({ key, value }) => {
     const occupant = movieFiles.find((f) => {
       return f.movieId === movieFile.movieId &&
         f.id !== movieFile.id &&
@@ -40,7 +40,9 @@ function createMapStateToProps() {
     (state) => state.settings.languages,
     (state) => state.movieFiles.items,
     (state, { editions }) => editions,
-    (movieFile, qualityProfiles, languages, movieFiles, editions = []) => {
+    (state) => state.movies.items,
+    (movieFile, qualityProfiles, languages, movieFiles, editions = [], movies) => {
+      const movie = movies.find((m) => m.id === movieFile.movieId);
 
       const filterItems = ['Any', 'Original'];
       const filteredLanguages = languages.items.filter((lang) => !filterItems.includes(lang.name));
@@ -60,7 +62,7 @@ function createMapStateToProps() {
         indexerFlags: movieFile.indexerFlags,
         edition: movieFile.edition,
         movieEditionId: movieFile.movieEditionId ?? 0,
-        editionOptions: getEditionSlotOptions(movieFile, movieFiles, editions),
+        editionOptions: getEditionSlotOptions(movieFile, movieFiles, editions, movie?.standardEditionName),
         releaseGroup: movieFile.releaseGroup,
         relativePath: movieFile.relativePath
       };

@@ -333,5 +333,121 @@ namespace NzbDrone.Core.Test.MovieTests.EditionTests
             _standardFile.Edition.Should().Be("IMAX");
             _movie.MovieFileId.Should().Be(0);
         }
+
+        [Test]
+        public void should_name_standard_slot_after_its_cut()
+        {
+            _movie.StandardEditionName = "Extended";
+
+            var slot = Subject.Resolve(_movie, "Extended");
+
+            slot.IsStandard.Should().BeTrue();
+            slot.Name.Should().Be("Extended");
+            slot.MovieFile.Should().Be(_standardFile);
+        }
+
+        [TestCase(null)]
+        [TestCase("Theatrical")]
+        public void should_not_fill_standard_slot_named_for_a_cut_with_untagged_or_theatrical_releases(string edition)
+        {
+            _movie.StandardEditionName = "Extended";
+
+            var slot = Subject.Resolve(_movie, edition);
+
+            slot.Tracked.Should().BeFalse();
+            slot.Name.Should().Be("Theatrical");
+        }
+
+        [Test]
+        public void should_find_standard_cut_name_in_title()
+        {
+            _movie.StandardEditionName = "Redux";
+
+            Subject.Resolve(_movie, null, "Movie.2000.Redux.720p.WEB-DL.x264-GRP").IsStandard.Should().BeTrue();
+            Subject.ResolveSlotIdForTitle(_movie, "Movie.2000.Redux.720p.WEB-DL.x264-GRP").Should().Be(0);
+            Subject.ResolveSlotIdForTitle(_movie, "Movie.2000.720p.WEB-DL.x264-GRP").Should().Be(-1);
+        }
+
+        [TestCase(null)]
+        [TestCase("Theatrical")]
+        [TestCase("Remastered")]
+        public void should_fill_theatrical_edition_with_untagged_releases_when_standard_is_named_for_a_cut(string edition)
+        {
+            _movie.StandardEditionName = "Extended";
+            GivenEdition(1, "Theatrical");
+
+            Subject.Resolve(_movie, edition).MovieEditionId.Should().Be(1);
+            Subject.Resolve(_movie, "Extended").IsStandard.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_allow_theatrical_edition_only_when_standard_is_named_for_a_cut()
+        {
+            Assert.Throws<NzbDroneClientException>(() => Subject.Add(new MovieEdition { MovieId = _movie.Id, Name = "Theatrical" }));
+
+            _movie.StandardEditionName = "Extended";
+
+            Subject.Add(new MovieEdition { MovieId = _movie.Id, Name = "Theatrical" }).Id.Should().BePositive();
+            Assert.Throws<NzbDroneClientException>(() => Subject.Add(new MovieEdition { MovieId = _movie.Id, Name = "Remastered" }));
+        }
+
+        [Test]
+        public void should_not_add_edition_with_the_standard_cut_name()
+        {
+            _movie.StandardEditionName = "Extended";
+
+            Assert.Throws<NzbDroneClientException>(() => Subject.Add(new MovieEdition { MovieId = _movie.Id, Name = "Extended Edition" }));
+        }
+
+        [Test]
+        public void should_rename_standard_edition_and_tag_its_file()
+        {
+            Subject.RenameStandardEdition(_movie.Id, " Extended ");
+
+            _movie.StandardEditionName.Should().Be("Extended");
+            _standardFile.Edition.Should().Be("Extended");
+            Mocker.GetMock<IMovieService>().Verify(v => v.UpdateMovie(_movie), Times.Once());
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Update(_standardFile), Times.Once());
+        }
+
+        [Test]
+        public void should_keep_file_edition_text_that_already_matches_the_cut()
+        {
+            _standardFile.Edition = "Extended Cut";
+
+            Subject.RenameStandardEdition(_movie.Id, "Extended");
+
+            _standardFile.Edition.Should().Be("Extended Cut");
+            Mocker.GetMock<IMediaFileService>().Verify(v => v.Update(It.IsAny<MovieFile>()), Times.Never());
+        }
+
+        [TestCase("")]
+        [TestCase("standard")]
+        public void should_reset_standard_edition_name(string name)
+        {
+            _movie.StandardEditionName = "Extended";
+
+            Subject.RenameStandardEdition(_movie.Id, name);
+
+            _movie.StandardEditionName.Should().BeNull();
+        }
+
+        [Test]
+        public void should_not_rename_standard_edition_to_a_tracked_edition()
+        {
+            GivenEdition(1, "IMAX");
+
+            Assert.Throws<NzbDroneClientException>(() => Subject.RenameStandardEdition(_movie.Id, "IMAX Edition"));
+        }
+
+        [Test]
+        public void should_not_reset_standard_edition_name_while_theatrical_is_tracked_separately()
+        {
+            _movie.StandardEditionName = "Extended";
+            GivenEdition(1, "Theatrical");
+
+            Assert.Throws<NzbDroneClientException>(() => Subject.RenameStandardEdition(_movie.Id, null));
+            _movie.StandardEditionName.Should().Be("Extended");
+        }
     }
 }

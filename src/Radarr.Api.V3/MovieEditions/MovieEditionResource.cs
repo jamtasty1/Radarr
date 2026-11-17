@@ -20,6 +20,14 @@ namespace Radarr.Api.V3.MovieEditions
         public bool HasFile { get; set; }
     }
 
+    public class StandardEditionResource
+    {
+        public int MovieId { get; set; }
+
+        // Blank for the plain standard edition.
+        public string Name { get; set; }
+    }
+
     public static class MovieEditionResourceMapper
     {
         public static MovieEditionResource ToResource(this MovieEdition model, MovieFile movieFile)

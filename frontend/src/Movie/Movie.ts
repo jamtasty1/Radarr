@@ -67,6 +67,8 @@ interface Movie extends ModelBase {
   monitored: boolean;
   // False when the movie only wants its extra editions.
   standardEditionMonitored?: boolean;
+  // Set when the standard edition is a particular cut (e.g. Extended).
+  standardEditionName?: string | null;
   status: MovieStatus;
   title: string;
   titleSlug: string;

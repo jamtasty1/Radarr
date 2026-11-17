@@ -1,3 +1,4 @@
+using NzbDrone.Common.Extensions;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.Profiles.Qualities;
 
@@ -28,12 +29,27 @@ namespace NzbDrone.Core.Movies.Editions
 
         public bool IsStandard => MovieEditionId == StandardEditionId;
 
+        // False for the plain standard edition and editions named only with standard words (e.g. "Theatrical").
+        public bool IsNamedCut => !EditionNormalizer.IsStandard(Name);
+
+        public static string GetStandardName(Movie movie)
+        {
+            return movie.StandardEditionName.IsNullOrWhiteSpace() ? StandardEditionName : movie.StandardEditionName;
+        }
+
+        // True when the standard edition has been renamed to a cut (e.g. "Extended"): releases must then
+        // name that cut to fill it, and untagged/theatrical releases need an edition of their own.
+        public static bool HasNamedStandard(Movie movie)
+        {
+            return !EditionNormalizer.IsStandard(movie.StandardEditionName);
+        }
+
         public static EditionSlot Standard(Movie movie, MovieFile movieFile)
         {
             return new EditionSlot
             {
                 MovieEditionId = StandardEditionId,
-                Name = StandardEditionName,
+                Name = GetStandardName(movie),
                 Tracked = true,
                 Monitored = movie.Monitored && movie.StandardEditionMonitored,
                 EditionMonitored = movie.StandardEditionMonitored,
@@ -47,7 +63,9 @@ namespace NzbDrone.Core.Movies.Editions
             return new EditionSlot
             {
                 MovieEditionId = -1,
-                Name = edition,
+
+                // An untagged release is most likely the theatrical cut.
+                Name = edition.IsNullOrWhiteSpace() ? "Theatrical" : edition,
                 Tracked = false,
                 Monitored = false
             };

@@ -67,6 +67,21 @@ namespace Radarr.Api.V3.MovieEditions
             return Accepted(resource.Id);
         }
 
+        // Names the standard edition for the cut the movie's main copy is (e.g. "Extended"). A blank name resets it.
+        [HttpPut("standard")]
+        [Consumes("application/json")]
+        public Ok<StandardEditionResource> RenameStandard([FromBody] StandardEditionResource resource)
+        {
+            if (resource.MovieId <= 0)
+            {
+                throw new BadRequestException("movieId must be provided");
+            }
+
+            _movieEditionService.RenameStandardEdition(resource.MovieId, resource.Name);
+
+            return TypedResults.Ok(resource);
+        }
+
         [RestDeleteById]
         public Ok Delete(int id)
         {

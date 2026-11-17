@@ -18,6 +18,7 @@ import IndexerFlags from 'Movie/IndexerFlags';
 import MovieFormats from 'Movie/MovieFormats';
 import MovieLanguages from 'Movie/MovieLanguages';
 import MovieQuality from 'Movie/MovieQuality';
+import useMovie from 'Movie/useMovie';
 import FileEditModal from 'MovieFile/Edit/FileEditModal';
 import MediaInfo from 'MovieFile/MediaInfo';
 import { MovieFile } from 'MovieFile/MovieFile';
@@ -97,9 +98,11 @@ function MovieFileEditorRow(props: MovieFileRowProps) {
   // With editions tracked, show which edition the file fills; otherwise the
   // parsed edition text.
   const { data: editions } = useMovieEditions(movieId);
-  const editionName = editions?.length
-    ? getEditionName(editions, movieEditionId)
-    : edition;
+  const standardEditionName = useMovie(movieId)?.standardEditionName;
+  const editionName =
+    editions?.length || standardEditionName
+      ? getEditionName(editions, movieEditionId, standardEditionName)
+      : edition;
 
   const showQualityPlaceholder = !quality;
   const showLanguagePlaceholder = !languages;

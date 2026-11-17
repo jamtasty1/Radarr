@@ -26,6 +26,7 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
             _movie = Builder<Movie>
                 .CreateNew()
                 .With(m => m.Title = "Movie Title")
+                .With(m => m.StandardEditionName = null)
                 .Build();
 
             _movieFile = new MovieFile { Quality = new QualityModel(), ReleaseGroup = "RadarrTest", Edition = "Uncut" };
@@ -203,6 +204,18 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 
             Subject.BuildFileName(_movie, _movieFile)
                    .Should().Be("Movie Title");
+        }
+
+        [Test]
+        public void should_append_edition_for_standard_edition_file_when_standard_edition_is_named_for_a_cut()
+        {
+            _movie.StandardEditionName = "Extended";
+            _movieFile.Edition = "Extended";
+            _movieFile.MovieEditionId = 0;
+            _namingConfig.StandardMovieFormat = "{Movie Title}";
+
+            Subject.BuildFileName(_movie, _movieFile)
+                   .Should().Be("Movie Title {edition-Extended}");
         }
 
         [Test]

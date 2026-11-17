@@ -128,6 +128,35 @@ export function useSetStandardEditionMonitored(movieId: number) {
   });
 }
 
+// Names the standard edition for the cut the movie's main copy is (e.g.
+// Extended); an empty name resets it. The standard file's edition text may
+// change too, so files are refreshed with the editions.
+export function useRenameStandardEdition(movieId: number) {
+  const dispatch = useDispatch();
+  const refresh = useRefreshEditions(movieId);
+
+  return useMutation<unknown, ApiError, string>({
+    mutationFn: (name) =>
+      sendRequest('/movieedition/standard', 'PUT', { movieId, name }),
+    onSuccess: (_data, name) => {
+      dispatch(
+        updateItem({
+          section: 'movies',
+          id: movieId,
+          standardEditionName: name || null,
+        })
+      );
+
+      refresh();
+    },
+  });
+}
+
+// The standard edition's name: the cut it was renamed to, else "Standard".
+export function getStandardEditionName(standardEditionName?: string | null) {
+  return standardEditionName || translate('StandardEdition');
+}
+
 export interface EditionOption {
   key: number;
   value: string;
@@ -135,20 +164,25 @@ export interface EditionOption {
 
 // Options for choosing which of a movie's editions a file fills.
 export function getEditionOptions(
-  editions: MovieEdition[] = []
+  editions: MovieEdition[] = [],
+  standardEditionName?: string | null
 ): EditionOption[] {
   return [
-    { key: STANDARD_EDITION_ID, value: translate('StandardEdition') },
+    {
+      key: STANDARD_EDITION_ID,
+      value: getStandardEditionName(standardEditionName),
+    },
     ...editions.map(({ id, name }) => ({ key: id, value: name })),
   ];
 }
 
 export function getEditionName(
   editions: MovieEdition[] | undefined,
-  movieEditionId: number | undefined
+  movieEditionId: number | undefined,
+  standardEditionName?: string | null
 ) {
   if (!movieEditionId) {
-    return translate('StandardEdition');
+    return getStandardEditionName(standardEditionName);
   }
 
   return editions?.find((e) => e.id === movieEditionId)?.name ?? '';

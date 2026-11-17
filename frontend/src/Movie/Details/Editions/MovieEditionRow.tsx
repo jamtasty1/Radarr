@@ -10,6 +10,7 @@ import useModalOpenState from 'Helpers/Hooks/useModalOpenState';
 import { icons, kinds } from 'Helpers/Props';
 import { MovieEdition } from 'Movie/Editions/MovieEdition';
 import {
+  getStandardEditionName,
   useDeleteMovieEdition,
   useSaveMovieEdition,
   useSetStandardEditionMonitored,
@@ -21,6 +22,7 @@ import { showMessage } from 'Store/Actions/appActions';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
 import EditMovieEditionModal from './EditMovieEditionModal';
+import RenameStandardEditionModal from './RenameStandardEditionModal';
 import styles from './MovieEditionsTable.css';
 
 interface MovieEditionRowProps {
@@ -29,6 +31,8 @@ interface MovieEditionRowProps {
   isStandardEditionMonitored: boolean;
   hasEditions: boolean;
   movieQualityProfileId: number;
+  // The cut the standard edition was renamed to, if any.
+  standardEditionName?: string | null;
   // Undefined for the standard edition, which is the movie itself.
   edition?: MovieEdition;
   movieFile?: MovieFile;
@@ -40,6 +44,7 @@ function MovieEditionRow({
   isStandardEditionMonitored,
   hasEditions,
   movieQualityProfileId,
+  standardEditionName,
   edition,
   movieFile,
 }: MovieEditionRowProps) {
@@ -125,7 +130,7 @@ function MovieEditionRow({
       <TableRowCell className={styles.name}>
         {isStandard ? (
           <span title={translate('StandardEditionHelpText')}>
-            {translate('StandardEdition')}
+            {getStandardEditionName(standardEditionName)}
           </span>
         ) : (
           edition.name
@@ -156,7 +161,13 @@ function MovieEditionRow({
       </TableRowCell>
 
       <TableRowCell className={styles.actions}>
-        {isStandard ? null : (
+        {isStandard ? (
+          <IconButton
+            title={translate('EditStandardEdition')}
+            name={icons.EDIT}
+            onPress={setEditModalOpen}
+          />
+        ) : (
           <>
             <IconButton
               title={translate('EditEdition')}
@@ -177,6 +188,15 @@ function MovieEditionRow({
           </>
         )}
       </TableRowCell>
+
+      {isStandard ? (
+        <RenameStandardEditionModal
+          isOpen={isEditModalOpen}
+          movieId={movieId}
+          standardEditionName={standardEditionName}
+          onModalClose={setEditModalClosed}
+        />
+      ) : null}
 
       {edition ? (
         <>

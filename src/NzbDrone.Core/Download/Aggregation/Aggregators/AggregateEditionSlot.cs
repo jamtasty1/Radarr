@@ -25,7 +25,7 @@ namespace NzbDrone.Core.Download.Aggregation.Aggregators
 
                 // A tracked edition the parser doesn't know (e.g. "Redux") was found in the title:
                 // record it so custom formats, the UI and naming see the edition too.
-                if (remoteMovie.ParsedMovieInfo != null && remoteMovie.EditionSlot is { Tracked: true, IsStandard: false } && EditionNormalizer.IsStandard(parsedEdition))
+                if (remoteMovie.ParsedMovieInfo != null && remoteMovie.EditionSlot is { Tracked: true, IsNamedCut: true } && EditionNormalizer.IsStandard(parsedEdition))
                 {
                     remoteMovie.ParsedMovieInfo.Edition = remoteMovie.EditionSlot.Name;
                 }

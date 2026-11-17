@@ -33,7 +33,7 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Aggregation.Aggregators
 
                 // A tracked edition the parser doesn't know was found in a name: keep it as the file's
                 // edition so renaming writes it and the file stays in that edition.
-                if (localMovie.EditionSlot is { Tracked: true, IsStandard: false } && EditionNormalizer.IsStandard(localMovie.Edition))
+                if (localMovie.EditionSlot is { Tracked: true } slot && (slot.IsNamedCut || !slot.IsStandard) && EditionNormalizer.IsStandard(localMovie.Edition))
                 {
                     localMovie.Edition = localMovie.EditionSlot.Name;
                 }

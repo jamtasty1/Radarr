@@ -30,7 +30,7 @@ namespace NzbDrone.Core.Movies.Editions
         // A release tagged only with these belongs to the standard edition.
         private static readonly HashSet<string> StandardWords = new HashSet<string>(StringComparer.Ordinal)
         {
-            "theatrical", "remastered", "restored"
+            "theatrical", "remastered", "restored", "standard"
         };
 
         private static readonly Dictionary<string, string> Aliases = new Dictionary<string, string>(StringComparer.Ordinal)

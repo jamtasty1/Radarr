@@ -24,6 +24,10 @@ namespace NzbDrone.Core.Movies
         // Whether the standard (untagged/theatrical) edition is wanted. Turning it off while
         // the movie stays monitored means only the movie's extra editions are wanted.
         public bool StandardEditionMonitored { get; set; }
+
+        // A name for the standard edition when the movie's main copy is a particular cut (e.g. "Extended").
+        // Null for the plain standard edition. Set through the edition service, not movie edits.
+        public string StandardEditionName { get; set; }
         public MovieStatusType MinimumAvailability { get; set; }
         public int QualityProfileId { get; set; }
 

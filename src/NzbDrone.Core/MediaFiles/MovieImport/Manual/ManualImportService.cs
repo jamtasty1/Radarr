@@ -123,6 +123,12 @@ namespace NzbDrone.Core.MediaFiles.MovieImport.Manual
 
             var slotId = _movieEditionService.ResolveSlotIdForTitle(movie, fileName);
 
+            if (slotId == EditionSlot.StandardEditionId)
+            {
+                // A standard edition named for a cut (e.g. "Extended") needs its name sent back to be chosen again.
+                return EditionSlot.HasNamedStandard(movie) ? movie.StandardEditionName : parsed;
+            }
+
             return slotId > 0 ? _movieEditionService.GetByMovieId(movie.Id).FirstOrDefault(e => e.Id == slotId)?.Name ?? parsed : parsed;
         }
 
